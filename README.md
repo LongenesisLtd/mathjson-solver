@@ -1,4 +1,5 @@
 # MathJSON Solver
+# Created by Longenesis Team
 
 ## How to use
 ```python
