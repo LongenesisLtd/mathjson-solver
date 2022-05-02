@@ -69,7 +69,9 @@ The following example has two constants defined - `x=10` and `y=20`. Then the su
 ["Switch", <expression>, <expression>, [<expression>, <expression>], ...],
 ```
 
-Example  \\
+`Switch` construct consists of keyword "Switch" followed by expression whose value will be compared to _Cases'_ values. Then comes the default value. Then follows arbitrary number of _Cases_.
+
+Example  \
 ```python
 ["Switch", "color", 100, ["red", 10], ["blue", 20], ["green", 30]],
 ```
