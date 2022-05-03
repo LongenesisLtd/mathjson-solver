@@ -1,8 +1,11 @@
 # MathJSON Solver
-# Created by Longenesis Team
+
+_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis team](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in [Longenesis healthcare software products](https://longenesis.com/engage). Its development was inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/).
 
 ## How to use
 ```python
+from mathjson_solver import create_solver
+
 parameters = {"x": 2, "y": 3}
 expression = ["Add", "x", "y", 4]
 
@@ -13,7 +16,32 @@ print(answer)
 # 9, because 2+3+4=9
 ```
 
-## More examples
+## Currently supported MathJSON constructs
+* `Add`
+* `Sum`
+* `Subtract`
+* `Multiply`
+* `Divide`
+* `Negate`
+* `Power`
+* `Root`
+* `Sqrt`
+* `Square`
+* `Exp`
+* `Log`
+* `Log2`
+* `Log10`
+* `Equal`
+* `Greater`
+* `GreaterEqual`
+* `Less`
+* `LessEqual`
+* `NotEqual`
+* `Constants` :broken_heart: Not compatible with CortexJS.
+* `Switch` :broken_heart: Not compatible with CortexJS.
+
+
+## Examples
 ```python
 ["Add", 2, 4, 3]                  # 2+4+3=9
 ["Subtract", 10, 5, 2]            # 10-5-2=3
@@ -38,7 +66,7 @@ print(answer)
 ["Round", -5.123456, 0]           # -5.0
 ```
 
-## Constants
+### Constants
 ```python
 [
     "Constants",
@@ -65,7 +93,7 @@ The following example has two constants defined - `x=10` and `y=20`. Then the su
 ```
 
 
-## Switch-Case statements
+### Switch-Case statements
 ```python
 ["Switch", <expression>, <expression>, [<expression>, <expression>], ...],
 ```
@@ -77,28 +105,3 @@ Example  \
 ["Switch", "color", 100, ["red", 10], ["blue", 20], ["green", 30]],
 ```
 The expression in this example will make solver to look for a constant (or a parameter) with the name "color". If "color" is "red", expression evaluates to 10, if "blue" - to 20, if "green" - to 30. Otherwise to 100. Please note that "color" here is a valid expression that evaluates to the actual value of "color" whether it is a parameter or constant.
-
-
-## Reserved words
-* `Add`
-* `Sum`
-* `Subtract`
-* `Multiply`
-* `Divide`
-* `Negate`
-* `Power`
-* `Root`
-* `Sqrt`
-* `Square`
-* `Exp`
-* `Log`
-* `Log2`
-* `Log10`
-* `Equal`
-* `Greater`
-* `GreaterEqual`
-* `Less`
-* `LessEqual`
-* `NotEqual`
-* `Constants`
-* `Switch`
