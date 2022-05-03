@@ -1,6 +1,6 @@
 # MathJSON Solver
 
-_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis team](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in [Longenesis healthcare software products](https://longenesis.com/engage). Its development was inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/).
+_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis team](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in [Longenesis digital health products](https://longenesis.com/engage). Its development was inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/).
 
 ## How to use
 ```python
@@ -9,7 +9,7 @@ from mathjson_solver import create_solver
 parameters = {"x": 2, "y": 3}
 expression = ["Add", "x", "y", 4]
 
-solver = create_evaluate_mathjson(parameters)
+solver = create_solver(parameters)
 answer = solver(expression)
 
 print(answer)
