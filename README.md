@@ -32,8 +32,7 @@ We welcome your contributions in the form of pull requests.
 
 
 ## Currently supported MathJSON constructs
-* `Add`
-* `Sum`
+* `Add` (alias `Sum`)
 * `Subtract`
 * `Multiply`
 * `Divide`
