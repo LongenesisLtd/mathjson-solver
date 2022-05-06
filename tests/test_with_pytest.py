@@ -32,6 +32,8 @@ from mathjson_solver import create_solver
         ({}, ["Abs", -3.5], 3.5),
         ({}, ["Round", -5.123456, 2], -5.12),
         ({}, ["Round", -5.123456, 0], -5),
+        ({}, ["Round", 5.4], 5),
+        ({}, ["Round", 5.5], 6),
         ({}, ["Constants", ["a", 1], ["b", 2], "a"], 1),
         ({}, ["Constants", ["a", 1], ["b", 2], ["c", 100], ["Sum", "a", "b"]], 3),
         ({}, ["Constants", ["a", 1], ["b", ["Add", 2, "a"]], "b"], 3),

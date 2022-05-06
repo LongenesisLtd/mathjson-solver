@@ -27,7 +27,7 @@ def create_mathjson_solver(solver_parameters):
             c = deepcopy(args[0])
         else:
             c = {}
-#         c = deepcopy(kwargs.get("c", {}))
+        #         c = deepcopy(kwargs.get("c", {}))
         if isinstance(s, numbers.Number):
             return s
         if isinstance(s, list):
@@ -48,6 +48,7 @@ def create_mathjson_solver(solver_parameters):
                         return f(x[1], c)
                 else:
                     return f(s[2], c)
+
             def If(s):
                 if len(s) < 3:
                     raise ValueError(f"Wrong parameters for 'If'")
@@ -87,7 +88,9 @@ def create_mathjson_solver(solver_parameters):
                 "LessEqual": lambda s: f(s[1], c) <= f(s[2], c),
                 "NotEqual": lambda s: f(s[1], c) != f(s[2], c),
                 "Abs": lambda s: abs(f(s[1], c)),
-                "Round": lambda s: round(f(s[1], c), f(s[2], c)),
+                "Round": lambda s: round(f(s[1], c), f(s[2], c))
+                if len(s) == 3
+                else int(round(f(s[1], c))),
             }
             if s[0] in constructs:
                 try:
