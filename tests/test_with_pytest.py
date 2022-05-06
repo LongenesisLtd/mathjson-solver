@@ -38,6 +38,7 @@ from mathjson_solver import create_solver
         ({"x": 1}, ["Add", 2, "x"], 3),
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
+        ({}, ["If", [["Equal", 1,0], 10], [["Equal", 2,2], 20], 9000], 20),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
