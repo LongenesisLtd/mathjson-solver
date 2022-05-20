@@ -51,8 +51,11 @@ We welcome your contributions in the form of pull requests.
 * `Less`
 * `LessEqual`
 * `NotEqual`
-* `Constants` :broken_heart: Not compatible with CortexJS.
-* `Switch` :broken_heart: Not compatible with CortexJS.
+
+### Additional constructs
+* `Constants`
+* `If`
+* `Switch`
 
 
 ## Examples
@@ -78,6 +81,7 @@ We welcome your contributions in the form of pull requests.
 ["Abs", -3.5]                     # |-3.5| = 3.5
 ["Round", -5.123456, 2]           # -5.12
 ["Round", -5.123456, 0]           # -5.0
+["Round", -5.123456]              # -5
 ```
 
 ### Constants
@@ -107,7 +111,38 @@ The following example has two constants defined - `x=10` and `y=20`. Then the su
 ```
 
 
-### Switch-Case statements
+### If statement
+```python
+[
+    "If",
+    [
+        [
+            "Equal",
+            1,
+            0
+        ],
+        10
+    ],
+    [
+        [
+            "Equal",
+            2,
+            2
+        ],
+        20
+    ],
+    9000
+]
+```
+This construct translates to:
+```
+if   1 == 0 then 10
+elif 2 == 2 then 20
+else 9000
+```
+
+
+### Switch-Case statement
 ```python
 ["Switch", <expression>, <expression>, [<expression>, <expression>], ...],
 ```
