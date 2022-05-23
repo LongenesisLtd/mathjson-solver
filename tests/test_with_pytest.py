@@ -1,10 +1,11 @@
 import sys
 import os
 import pytest
+import re
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src/"))
 
-from mathjson_solver import create_solver
+from mathjson_solver import create_solver, MathJSONException
 
 
 @pytest.mark.parametrize(
@@ -40,9 +41,48 @@ from mathjson_solver import create_solver
         ({"x": 1}, ["Add", 2, "x"], 3),
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
-        ({}, ["If", [["Equal", 1,0], 10], [["Equal", 2,2], 20], 9000], 20),
+        ({}, ["If", [["Equal", 1, 0], 10], [["Equal", 2, 2], 20], 9000], 20),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
     solver = create_solver(parameters)
     assert solver(expression) == expected_result
+
+
+def test_raises_divide():
+    solver = create_solver({})
+    with pytest.raises(
+        MathJSONException,
+        match=re.escape("Problem in Divide. ['Divide', 1, 0]. division by zero"),
+    ):
+        r = solver(["Divide", 1, 0])
+
+
+def test_raises_unsupported():
+    solver = create_solver({})
+    with pytest.raises(
+        MathJSONException,
+        match=re.escape(
+            "Problem in MathJSON. ['Unsupported', 1]. 'Unsupported' is not supported"
+        ),
+    ):
+        r = solver(["Unsupported", 1])
+
+
+def test_raises_malformed():
+    solver = create_solver({})
+    with pytest.raises(
+        MathJSONException,
+        match=re.escape("Problem in Power. ['Power', 1]. list index out of range"),
+    ):
+        r = solver(["Power", 1])
+
+
+def test_handle_exception():
+    solver = create_solver({})
+    try:
+        r = solver(["Power", 1])
+    except MathJSONException:
+        assert True
+    else:
+        assert False

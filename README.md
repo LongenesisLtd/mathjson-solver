@@ -154,3 +154,33 @@ Example
 ["Switch", "color", 100, ["red", 10], ["blue", 20], ["green", 30]],
 ```
 The expression in this example will make solver to look for a constant (or a parameter) with the name "color". If "color" is "red", expression evaluates to 10, if "blue" - to 20, if "green" - to 30. Otherwise to 100. Please note that "color" here is a valid expression that evaluates to the actual value of "color" whether it is a parameter or constant.
+
+
+## Exception handling
+
+A `MathJSONException` is raised when expression cannot be evaluated.
+
+Let's consider this division by zero example.
+
+```python
+from mathjson_solver import create_solver
+
+solver = create_solver({})
+solver(["Divide", 1, 0])
+```
+This will raise an exception:
+```Python
+MathJSONException("Problem in Divide. ['Divide', 1, 0]. division by zero")
+```
+
+Import `MathJSONException` to handle it:
+```python
+from mathjson_solver import create_solver, MathJSONException
+
+solver = create_solver({})
+try:
+    solver(["Divide", 1, 0])
+except MathJSONException:
+    pass
+    # invoke your own exception logger here
+```
