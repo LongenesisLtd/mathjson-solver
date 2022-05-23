@@ -1,6 +1,6 @@
 # MathJSON Solver
 
-_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis team](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in [Longenesis digital health products](https://longenesis.com/engage). Its development was inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/).
+_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in Longenesis digital health products and later released as open source project. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
 
 ## How to use
 ```python
@@ -85,12 +85,12 @@ We welcome your contributions in the form of pull requests.
 ```
 
 ### Constants
-```python
+```
 [
     "Constants",
-    ["constant1", <expression>],
-    ["constant2", <expression>],
-    ["constant3", <expression>],
+    ["constant_name1", <expression>],
+    ["constant_name2", <expression>],
+    ["constant_name3", <expression>],
     ...,
     <expression>
 ]
@@ -112,23 +112,32 @@ The following example has two constants defined - `x=10` and `y=20`. Then the su
 
 
 ### If statement
+```
+[
+    "If",
+    [
+        <true-or-false-expression>,
+        <expression-to-calculate>
+    ],
+    [
+        <elseif-true-or-false-expression>,
+        <expression-to-calculate>
+    ],
+    ...,
+    <else-expression-to-calculate>
+]
+```
+
+Example
 ```python
 [
     "If",
     [
-        [
-            "Equal",
-            1,
-            0
-        ],
+        ["Equal", 1, 0],
         10
     ],
     [
-        [
-            "Equal",
-            2,
-            2
-        ],
+        ["Equal", 2, 2],
         20
     ],
     9000
@@ -141,10 +150,11 @@ elif 2 == 2 then 20
 else 9000
 ```
 
+`If` expression do not need to be strictly _boolean_. Any value that is not _false_ are considered _true_.
 
 ### Switch-Case statement
-```python
-["Switch", <expression>, <expression>, [<expression>, <expression>], ...],
+```
+["Switch", <on-expression>, <default-result-expression>, [<case1-expression>, <result-expression>], ...],
 ```
 
 `Switch` construct consists of keyword "Switch" followed by expression whose value will be compared to _Cases'_ values. Then comes the default value. Then follows arbitrary number of _Cases_.
@@ -158,22 +168,7 @@ The expression in this example will make solver to look for a constant (or a par
 
 ## Exception handling
 
-A `MathJSONException` is raised when expression cannot be evaluated.
-
-Let's consider this division by zero example.
-
-```python
-from mathjson_solver import create_solver
-
-solver = create_solver({})
-solver(["Divide", 1, 0])
-```
-This will raise an exception:
-```Python
-MathJSONException("Problem in Divide. ['Divide', 1, 0]. division by zero")
-```
-
-Import `MathJSONException` to handle it:
+A `MathJSONException` is raised when expression cannot be evaluated. Import `MathJSONException` to handle it:
 ```python
 from mathjson_solver import create_solver, MathJSONException
 
@@ -184,3 +179,5 @@ except MathJSONException:
     pass
     # invoke your own exception logger here
 ```
+
+Left unhandled, the exception will look like `MathJSONException("Problem in Divide. ['Divide', 1, 0]. division by zero")`.
