@@ -51,6 +51,7 @@ from mathjson_solver import create_solver, MathJSONException
         ({}, ["Length", ["Array"]], 0),
         ({}, ["Int", "12"], 12),
         ({}, ["Int", "12.2"], 12),
+        ({}, ["Float", "12.2"], 12.2),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
