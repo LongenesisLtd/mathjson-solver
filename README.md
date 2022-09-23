@@ -107,14 +107,18 @@ We welcome your contributions in the form of pull requests.
 ["Round", -5.123456, 0]           # -5.0
 ["Round", -5.123456]              # -5
 ["Array", 1, 2]                   # ["Array", 1, 2]
-["Max", ["Array", 1, 2, 3, 5, 2]] # 5
 
+["Max", ["Array", 1, 2, 3, 5, 2]] # 5
 ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]]  # 9
 ["Median", ["Array", 1, 2, 3, 5, 2]]              # 2
 ["Average", ["Array", 1, 2, 3, 5, 2]]             # 2.6
 ["Length", ["Array", 1, 2, 3, 5, 2, 9]]           # 6
-
-["Length", ["Array"]]             # 0
+["Length", ["Array"]]                             # 0
+["Any", ["Array", 0, 0, False, 0, 0]]             # False
+["Any", ["Array", 0, 1, False, 0, 0]]             # True
+["All", ["Array", 0, 1, False, 0, 0]]             # False
+["All", ["Array", 0, 1, False, "", 0]]            # False
+["All", ["Array", 2, 1, True, "zz", 2]]           # True
 ["Int", "12"]                     # 12
 ["Int", "12.2"]                   # 12
 ["Float", "12.2"]                 # 12.2
