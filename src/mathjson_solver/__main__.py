@@ -2,6 +2,7 @@ import numbers
 from functools import reduce
 import math
 from copy import deepcopy
+from statistics import median
 
 
 class MathJSONException(Exception):
@@ -21,6 +22,19 @@ class MathJSONException(Exception):
         return f"Problem in {self.construct}. {self.expr}. {m}"
 
 
+def requires_array(func):
+    def inner1(*args, **kwargs):
+        try:
+            if args[0][1][0] == "Array" and len(args[0][1]) > 0:
+                return func(*args, **kwargs)
+            else:
+                raise ValueError(f"'{func.__name__}' should receive a list")
+        except TypeError:
+            raise ValueError(f"'{func.__name__}' realy should receive a list")
+
+    return inner1
+
+
 def create_mathjson_solver(solver_parameters):
     def f(s, *args):
         if args:
@@ -31,6 +45,48 @@ def create_mathjson_solver(solver_parameters):
         if isinstance(s, numbers.Number):
             return s
         if isinstance(s, list):
+
+            def Arr(s):
+                return s
+
+            @requires_array
+            def Max(s):
+                return max([f(x, c) for x in s[1][1:]])
+
+            @requires_array
+            def Min(s):
+                return min([f(x, c) for x in s[1][1:]])
+
+            @requires_array
+            def Average(s):
+                s_ = [f(x, c) for x in s[1][1:]]
+                print(f"{s_} {sum(s_)}/{len(s_)}")
+                return sum(s_) / len(s_)
+
+            @requires_array
+            def Median(s):
+                return median([f(x, c) for x in s[1][1:]])
+
+            @requires_array
+            def Length(s):
+                return len([f(x, c) for x in s[1][1:]])
+
+            @requires_array
+            def Any(s):
+                return any([f(x, c) for x in s[1][1:]])
+
+            @requires_array
+            def All(s):
+                return all([f(x, c) for x in s[1][1:]])
+
+            def Int(s):
+                try:
+                    return int(f(s[1], c))
+                except ValueError:
+                    return int(float(f(s[1], c)))
+
+            def Float(s):
+                return float(f(s[1], c))
 
             def Constants(s):
                 for x in s[1:-1]:
@@ -91,6 +147,16 @@ def create_mathjson_solver(solver_parameters):
                 "Round": lambda s: round(f(s[1], c), f(s[2], c))
                 if len(s) == 3
                 else int(round(f(s[1], c))),
+                "Max": Max,
+                "Min": Min,
+                "Average": Average,
+                "Median": Median,
+                "Length": Length,
+                "Any": Any,
+                "All": All,
+                "Array": Arr,
+                "Int": Int,
+                "Float": Float,
             }
             if s[0] in constructs:
                 try:

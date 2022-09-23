@@ -42,6 +42,15 @@ from mathjson_solver import create_solver, MathJSONException
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({}, ["If", [["Equal", 1, 0], 10], [["Equal", 2, 2], 20], 9000], 20),
+        ({}, ["Array", 1, 2, 3, 5, 2], ["Array", 1, 2, 3, 5, 2]),
+        ({}, ["Max", ["Array", 1, 2, 3, 5, 2]], 5),
+        ({}, ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]], 9),
+        ({}, ["Median", ["Array", 1, 2, 3, 5, 2]], 2),
+        ({}, ["Average", ["Array", 1, 2, 3, 5, 2]], 2.6),
+        ({}, ["Length", ["Array", 1, 2, 3, 5, 2, 9]], 6),
+        ({}, ["Length", ["Array"]], 0),
+        ({}, ["Int", "12"], 12),
+        ({}, ["Int", "12.2"], 12),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):

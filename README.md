@@ -4,6 +4,9 @@
 
 _MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in Longenesis digital health products and later released as open source project. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
 
+Please ask questions and share feedback in our Gitter chat [https://gitter.im/mathjson-solver/community](https://gitter.im/mathjson-solver/community).
+
+
 ## How to use
 ```python
 from mathjson_solver import create_solver
@@ -33,8 +36,9 @@ We welcome your contributions in the form of pull requests.
 3. Make a pull request to share your improvements with the community and to include it into official release.
 
 
-## Currently supported MathJSON constructs
-* `Add` (alias `Sum`)
+## Currently supported constructs
+### Math
+* `Sum` (alias `Add`)
 * `Subtract`
 * `Multiply`
 * `Divide`
@@ -47,6 +51,22 @@ We welcome your contributions in the form of pull requests.
 * `Log`
 * `Log2`
 * `Log10`
+
+
+### Aggregation
+* `Array`
+* `Max`
+* `Min`
+* `Average`
+* `Median`
+* `Len`
+* `All`
+* `Any`
+
+
+### Conditions
+* `If`
+* `Switch`
 * `Equal`
 * `Greater`
 * `GreaterEqual`
@@ -54,10 +74,12 @@ We welcome your contributions in the form of pull requests.
 * `LessEqual`
 * `NotEqual`
 
+### Typecasting
+* `Int`
+* `Float`
+
 ### Additional constructs
 * `Constants`
-* `If`
-* `Switch`
 
 
 ## Examples
