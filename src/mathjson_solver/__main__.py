@@ -30,9 +30,18 @@ def requires_array(func):
             else:
                 raise ValueError(f"'{func.__name__}' should receive a list")
         except TypeError:
-            raise ValueError(f"'{func.__name__}' realy should receive a list")
+            raise ValueError(f"'{func.__name__}' really should receive a list")
 
     return inner1
+
+
+def is_numeric(x):
+    try:
+        float(x)
+    except ValueError:
+        return False
+    else:
+        return True
 
 
 def create_mathjson_solver(solver_parameters):
@@ -59,9 +68,12 @@ def create_mathjson_solver(solver_parameters):
 
             @requires_array
             def Average(s):
-                s_ = [f(x, c) for x in s[1][1:]]
-                print(f"{s_} {sum(s_)}/{len(s_)}")
-                return sum(s_) / len(s_)
+                s_ = [float(f(x, c)) for x in s[1][1:] if is_numeric(x)]
+                # print(f"{s_} {sum(s_)}/{len(s_)}")
+                try:
+                    return sum(s_) / len(s_)
+                except ZeroDivisionError:
+                    return None
 
             @requires_array
             def Median(s):

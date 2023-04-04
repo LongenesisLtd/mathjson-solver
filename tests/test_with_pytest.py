@@ -41,12 +41,39 @@ from mathjson_solver import create_solver, MathJSONException
         ({"x": 1}, ["Add", 2, "x"], 3),
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
+        ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
         ({}, ["If", [["Equal", 1, 0], 10], [["Equal", 2, 2], 20], 9000], 20),
         ({}, ["Array", 1, 2, 3, 5, 2], ["Array", 1, 2, 3, 5, 2]),
         ({}, ["Max", ["Array", 1, 2, 3, 5, 2]], 5),
         ({}, ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]], 9),
         ({}, ["Median", ["Array", 1, 2, 3, 5, 2]], 2),
         ({}, ["Average", ["Array", 1, 2, 3, 5, 2]], 2.6),
+        (
+            {},
+            [
+                "Average",
+                [
+                    "Array",
+                    "-2",
+                    -1,
+                    "0",
+                    1,
+                    "2",
+                    "3",
+                    4,
+                    5,
+                    6,
+                    "seven",
+                    8,
+                    "9",
+                    "10",
+                    15,
+                    10,
+                ],
+            ],
+            5.0,
+        ),
+        ({}, ["Average", ["Array"]], None),
         ({}, ["Length", ["Array", 1, 2, 3, 5, 2, 9]], 6),
         ({}, ["Length", ["Array"]], 0),
         ({}, ["Int", "12"], 12),
@@ -57,8 +84,6 @@ from mathjson_solver import create_solver, MathJSONException
         ({}, ["All", ["Array", 0, 1, False, 0, 0]], False),
         ({}, ["All", ["Array", 0, 1, False, "", 0]], False),
         ({}, ["All", ["Array", 2, 1, True, "zz", 2]], True),
-
-
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
