@@ -68,7 +68,7 @@ def create_mathjson_solver(solver_parameters):
 
             @requires_array
             def Average(s):
-                s_ = [float(f(x, c)) for x in s[1][1:] if is_numeric(x)]
+                s_ = [float(f(x, c)) for x in s[1][1:] if is_numeric(f(x, c))]
                 # print(f"{s_} {sum(s_)}/{len(s_)}")
                 try:
                     return sum(s_) / len(s_)

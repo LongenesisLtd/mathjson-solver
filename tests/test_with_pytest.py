@@ -74,6 +74,7 @@ from mathjson_solver import create_solver, MathJSONException
             5.0,
         ),
         ({}, ["Average", ["Array"]], None),
+        ({"a": 10, "b": 20}, ["Average", ["Array", "a", "b"]], 15),
         ({}, ["Length", ["Array", 1, 2, 3, 5, 2, 9]], 6),
         ({}, ["Length", ["Array"]], 0),
         ({}, ["Int", "12"], 12),
