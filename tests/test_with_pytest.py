@@ -30,6 +30,8 @@ from mathjson_solver import create_solver, MathJSONException
         ({}, ["Log10", 1000], 3),
         ({}, ["Equal", 10, 10], True),
         ({}, ["Equal", 10, 12], False),
+        ({}, ["Equal", "aaa", "aaa"], True),
+        ({}, ["Equal", "aaa", "baa"], False),
         ({}, ["Abs", -3.5], 3.5),
         ({}, ["Round", -5.123456, 2], -5.12),
         ({}, ["Round", -5.123456, 0], -5),
