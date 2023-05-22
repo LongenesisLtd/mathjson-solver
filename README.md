@@ -7,6 +7,10 @@ _MathJSON Solver_ is a Python module to numerically evaluate MathJSON expression
 Please ask questions and share feedback in our Gitter chat [https://gitter.im/mathjson-solver/community](https://gitter.im/mathjson-solver/community).
 
 ## What's new
+
+### 1.4.2
+Added `Str` construct. It tries to convert value to string.
+
 ### 1.4.0
 We changed the behavior of `Average` to be more forgiving. In version 1.4.0 `Average` accepts arrays like `[2, 4 ,"6"]` and internally converts numeric strings to floats.
 Also, it skips values that cannot be converted to numeric. Internally `Average` will convert array `[2, "three", 4 ,"6"]` to `[2.0, 4.0 ,6.0]`. When given an empty array, `Average` now returns `None` instead of throwing an error.

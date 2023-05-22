@@ -127,6 +127,11 @@ def create_mathjson_solver(solver_parameters):
                         return f(x[1], c)
                 return f(s[-1], c)
 
+            def Str(s):
+                if len(s) < 2:
+                    raise ValueError(f"Wrong parameters for 'Str'")
+                return f"{f(s[1])}"
+
             constructs = {
                 "Add": lambda s: sum([f(x, c) for x in s[1:]]),
                 "Sum": lambda s: sum([f(x, c) for x in s[1:]]),
@@ -169,6 +174,7 @@ def create_mathjson_solver(solver_parameters):
                 "Array": Arr,
                 "Int": Int,
                 "Float": Float,
+                "Str": Str
             }
             if s[0] in constructs:
                 try:
