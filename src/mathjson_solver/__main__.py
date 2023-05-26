@@ -127,6 +127,16 @@ def create_mathjson_solver(solver_parameters):
                         return f(x[1], c)
                 return f(s[-1], c)
 
+            def In(s):
+                if len(s) != 3:
+                    raise ValueError(f"Wrong parameters for 'In'")
+                if type(s[2]) != list and s[2][0] != "Array":
+                    raise ValueError(
+                        f"Wrong parameters for 'In'. Parameter 2 must be a list."
+                    )
+
+                return f(s[1], c) in [f(x, c) for x in s[2][1:]]
+
             def Str(s):
                 if len(s) < 2:
                     raise ValueError(f"Wrong parameters for 'Str'")
@@ -172,9 +182,10 @@ def create_mathjson_solver(solver_parameters):
                 "Any": Any,
                 "All": All,
                 "Array": Arr,
+                "In": In,
                 "Int": Int,
                 "Float": Float,
-                "Str": Str
+                "Str": Str,
             }
             if s[0] in constructs:
                 try:

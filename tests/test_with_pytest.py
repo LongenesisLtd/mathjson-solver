@@ -94,6 +94,22 @@ from mathjson_solver import create_solver, MathJSONException
         ({}, 11, 11),
         ({}, True, True),
         ({}, False, False),
+        ({}, ["In", 2, ["Array", 1, 2, 3]], True),
+        ({}, ["In", 4, ["Array", 1, 2, 3]], False),
+        ({}, ["In", "Abc", ["Array", 1, 2, "Abc", 4]], True),
+        ({}, ["In", "Abc", ["Array", 1, 2, "Abcd", 4]], False),
+        ({}, ["In", ["Add", 2, 2], ["Array", 1, 4, 3]], True),
+        ({}, ["In", ["Add", 2, 1], ["Array", 1, 2, ["Add", 1, 2]]], True),
+        (
+            {"a": 10, "b": 20},
+            ["In", ["Add", "a", "b"], ["Array", 1, 2, ["Add", 15, 15], 4]],
+            True,
+        ),
+        (
+            {"a": 10, "b": 20},
+            ["In", ["Add", "a", "b"], ["Array", 1, 2, ["Add", 15, 16], 4]],
+            False,
+        ),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
