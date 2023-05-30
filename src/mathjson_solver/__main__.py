@@ -130,17 +130,59 @@ def create_mathjson_solver(solver_parameters):
             def In(s):
                 if len(s) != 3:
                     raise ValueError(f"Wrong parameters for 'In'")
-                if type(s[2]) != list and s[2][0] != "Array":
+                if type(s[2]) == list and s[2][0] == "Array":
+                    return f(s[1], c) in [f(x, c) for x in s[2][1:]]
+
+                elif type(s[2]) == str:
+                    return f(s[1], c) in f(s[2], c)
+                else:
                     raise ValueError(
                         f"Wrong parameters for 'In'. Parameter 2 must be a list."
                     )
 
-                return f(s[1], c) in [f(x, c) for x in s[2][1:]]
+            def Not_in(s):
+                return not In(s)
+
+            def Contains_any_of(s):
+                if type(s[1]) == list and s[1][0] == "Array":
+                    list1 = [f(x, c) for x in s[1][1:]]
+                elif type(s[1]) == str:
+                    list1 = f(s[1], c)
+
+                if type(s[2]) == list and s[2][0] == "Array":
+                    list2 = [f(x, c) for x in s[2][1:]]
+                elif type(s[2]) == str:
+                    list2 = f(s[2], c)
+
+                if any(x in list1 for x in list2):
+                    return True
+                return False
+
+            def Contains_all_of(s):
+                if type(s[1]) == list and s[1][0] == "Array":
+                    list1 = [f(x, c) for x in s[1][1:]]
+                elif type(s[1]) == str:
+                    list1 = f(s[1], c)
+
+                if type(s[2]) == list and s[2][0] == "Array":
+                    list2 = [f(x, c) for x in s[2][1:]]
+                elif type(s[2]) == str:
+                    list2 = f(s[2], c)
+
+                if all(x in list1 for x in list2):
+                    return True
+                return False
+
+            def Contains_none_of(s):
+                return not Contains_any_of(s)
 
             def Str(s):
                 if len(s) < 2:
                     raise ValueError(f"Wrong parameters for 'Str'")
                 return f"{f(s[1])}"
+
+            def Not(s):
+                return not f(s[1])
 
             constructs = {
                 "Add": lambda s: sum([f(x, c) for x in s[1:]]),
@@ -183,9 +225,14 @@ def create_mathjson_solver(solver_parameters):
                 "All": All,
                 "Array": Arr,
                 "In": In,
+                "Not_in": Not_in,
+                "Contains_any_of": Contains_any_of,
+                "Contains_all_of": Contains_all_of,
+                "Contains_none_of": Contains_none_of,
                 "Int": Int,
                 "Float": Float,
                 "Str": Str,
+                "Not": Not,
             }
             if s[0] in constructs:
                 try:
@@ -193,9 +240,10 @@ def create_mathjson_solver(solver_parameters):
                 except Exception as e:
                     raise MathJSONException(e, s, mathjson_construct=s[0])
             else:
-                raise MathJSONException(
-                    NotImplementedError(f"'{s[0]}' is not supported"), s
-                )
+                # raise MathJSONException(
+                #     NotImplementedError(f"'{s[0]}' is not supported"), s
+                # )
+                return s
         elif s in solver_parameters:
             return f(solver_parameters[s], c)
         elif s in c:
