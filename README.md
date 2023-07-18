@@ -82,9 +82,18 @@ We welcome your contributions in the form of pull requests.
 * `LessEqual`
 * `NotEqual`
 
+### Membership operators
+* `In`
+* `NotIn`
+* `ContainsAnyOf`
+* `ContainsAllOf`
+* `ContainsNoneOf`
+
 ### Typecasting
+* `Str`
 * `Int`
 * `Float`
+* `Not`
 
 ### Additional constructs
 * `Constants`
@@ -120,6 +129,8 @@ We welcome your contributions in the form of pull requests.
 ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]]  # 9
 ["Median", ["Array", 1, 2, 3, 5, 2]]              # 2
 ["Average", ["Array", 1, 2, 3, 5, 2]]             # 2.6
+["Average", ["Array"]]                            # None
+
 ["Length", ["Array", 1, 2, 3, 5, 2, 9]]           # 6
 ["Length", ["Array"]]                             # 0
 ["Any", ["Array", 0, 0, False, 0, 0]]             # False
@@ -130,6 +141,18 @@ We welcome your contributions in the form of pull requests.
 ["Int", "12"]                     # 12
 ["Int", "12.2"]                   # 12
 ["Float", "12.2"]                 # 12.2
+["Str", 12]                       # "12"
+["Str", "12"]                     # "12"
+["Str", "aabb"]                   # "aabb"
+["Not", True]                      # False
+["Not", 0]                         # True
+
+["In", 2, ["Array", 1, 2, 3]]     # True
+["In", 4, ["Array", 1, 2, 3]]     # False
+["ContainsAnyOf", ["Array", 1, 2, 3], ["Array", 3, 4, 5, 6]]     # True
+["ContainsAnyOf", ["Array", 1, 2, 3], ["Array", 4, 5, 6]]        # False
+["ContainsAllOf", ["Array", 1, 2, 3], ["Array", 1, 2, 3]]        # True
+["ContainsAllOf", ["Array", 1, 2], ["Array", 1, 2, 3]]           # False
 ```
 
 ### Constants
