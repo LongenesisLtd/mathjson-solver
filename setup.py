@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="mathjson-solver",
-    version="1.6.1",
+    version="1.7.0",
     author="Martins Mednis",
     author_email="mrt@mednis.info",
     description="Utilities for MathJSON evaluation",

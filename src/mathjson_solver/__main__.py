@@ -3,6 +3,8 @@ from functools import reduce
 import math
 from copy import deepcopy
 from statistics import median
+import logging
+import traceback
 
 
 class MathJSONException(Exception):
@@ -123,8 +125,19 @@ def create_mathjson_solver(solver_parameters):
                 for x in s[1:-1]:
                     if len(x) != 2:
                         raise ValueError(f"Wrong if or elif in 'If'")
-                    if f(x[0], c):
-                        return f(x[1], c)
+                    try:
+                        if f(x[0], c):
+                            try:
+                                return f(x[1], c)
+                            except MathJSONException as e:
+                                logging.error(
+                                    "MathJSONException: %s", traceback.format_exc()
+                                )
+                                continue
+                    except MathJSONException as e:
+                        logging.error("MathJSONException: %s", traceback.format_exc())
+                        return f(s[-1], c)  # return default value (else)
+
                 return f(s[-1], c)
 
             def In(s):
@@ -237,6 +250,7 @@ def create_mathjson_solver(solver_parameters):
                 "Float": Float,
                 "Str": Str,
                 "Not": Not,
+                "IsDefined": lambda s: s[1] in c,
             }
             if s[0] in constructs:
                 try:
@@ -253,6 +267,7 @@ def create_mathjson_solver(solver_parameters):
         elif s in c:
             return f(c[s], c)
         else:
+            # raise KeyError(f"Parameter '{s}' is not defined")
             return s
 
     return f
