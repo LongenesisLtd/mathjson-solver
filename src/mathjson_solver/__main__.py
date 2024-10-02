@@ -1,4 +1,5 @@
 import numbers
+from typing import Union
 from functools import reduce
 import math
 from copy import deepcopy
@@ -60,36 +61,52 @@ def create_mathjson_solver(solver_parameters):
             def Arr(s):
                 return s
 
-            @requires_array
+            # @requires_array
             def Max(s):
-                return max([f(x, c) for x in s[1][1:]])
+                if isinstance(s[1], str):
+                    return max([f(x, c) for x in f(s[1], c) if is_numeric(f(x, c))])
+                else:
+                    return max([f(x, c) for x in s[1][1:] if is_numeric(f(x, c))])
 
-            @requires_array
+            # @requires_array
             def Min(s):
-                return min([f(x, c) for x in s[1][1:]])
+                if isinstance(s[1], str):
+                    return min([f(x, c) for x in f(s[1], c) if is_numeric(f(x, c))])
+                else:
+                    return min([f(x, c) for x in s[1][1:] if is_numeric(f(x, c))])
 
-            @requires_array
             def Average(s):
-                s_ = [float(f(x, c)) for x in s[1][1:] if is_numeric(f(x, c))]
+                if isinstance(s[1], str):
+                    # A reference to "answer" has been passed
+                    s_ = [float(f(x, c)) for x in f(s[1], c) if is_numeric(f(x, c))]
+                else:
+                    s_ = [float(f(x, c)) for x in s[1][1:] if is_numeric(f(x, c))]
                 # print(f"{s_} {sum(s_)}/{len(s_)}")
                 try:
                     return sum(s_) / len(s_)
                 except ZeroDivisionError:
                     return None
 
-            @requires_array
+            # @requires_array
             def Median(s):
-                return median([f(x, c) for x in s[1][1:]])
+                if isinstance(s[1], str):
+                    return median([f(x, c) for x in f(s[1], c) if is_numeric(f(x, c))])
+                else:
+                    return median([f(x, c) for x in s[1][1:] if is_numeric(f(x, c))])
 
-            @requires_array
+            # @requires_array
             def Length(s):
-                return len([f(x, c) for x in s[1][1:]])
+                if isinstance(s[1], str):
 
-            @requires_array
+                    return len([x for x in f(s[1], c)][1:])
+                else:
+                    return len([x for x in s[1][1:]])
+
+            # @requires_array
             def Any(s):
                 return any([f(x, c) for x in s[1][1:]])
 
-            @requires_array
+            # @requires_array
             def All(s):
                 return all([f(x, c) for x in s[1][1:]])
 
@@ -112,7 +129,7 @@ def create_mathjson_solver(solver_parameters):
                 for x in s[3:]:
                     if len(x) != 2:
                         raise ValueError(
-                            f"Case of 'Switch' should have exactly two parameters"
+                            "Case of 'Switch' should have exactly two parameters"
                         )
                     if expression == f(x[0], c):
                         return f(x[1], c)
@@ -121,20 +138,20 @@ def create_mathjson_solver(solver_parameters):
 
             def If(s):
                 if len(s) < 3:
-                    raise ValueError(f"Wrong parameters for 'If'")
+                    raise ValueError("Wrong parameters for 'If'")
                 for x in s[1:-1]:
                     if len(x) != 2:
-                        raise ValueError(f"Wrong if or elif in 'If'")
+                        raise ValueError("Wrong if or elif in 'If'")
                     try:
                         if f(x[0], c):
                             try:
                                 return f(x[1], c)
-                            except MathJSONException as e:
+                            except MathJSONException:
                                 logging.error(
                                     "MathJSONException: %s", traceback.format_exc()
                                 )
                                 continue
-                    except MathJSONException as e:
+                    except MathJSONException:
                         logging.error("MathJSONException: %s", traceback.format_exc())
                         return f(s[-1], c)  # return default value (else)
 
@@ -142,29 +159,29 @@ def create_mathjson_solver(solver_parameters):
 
             def In(s):
                 if len(s) != 3:
-                    raise ValueError(f"Wrong parameters for 'In'")
-                if type(s[2]) == list and s[2][0] == "Array":
+                    raise ValueError("Wrong parameters for 'In'")
+                if isinstance(s[2], list) and s[2][0] == "Array":
                     return f(s[1], c) in [f(x, c) for x in s[2][1:]]
 
-                elif type(s[2]) == str:
+                elif isinstance(s[2], str):
                     return f(s[1], c) in f(s[2], c)
                 else:
                     raise ValueError(
-                        f"Wrong parameters for 'In'. Parameter 2 must be a list."
+                        "Wrong parameters for 'In'. Parameter 2 must be a list."
                     )
 
             def Not_in(s):
                 return not In(s)
 
             def Contains_any_of(s):
-                if type(s[1]) == list and s[1][0] == "Array":
+                if isinstance(s[1], list) and s[1][0] == "Array":
                     list1 = [f(x, c) for x in s[1][1:]]
-                elif type(s[1]) == str:
+                elif isinstance(s[1], str):
                     list1 = f(s[1], c)
 
-                if type(s[2]) == list and s[2][0] == "Array":
+                if isinstance(s[2], list) and s[2][0] == "Array":
                     list2 = [f(x, c) for x in s[2][1:]]
-                elif type(s[2]) == str:
+                elif isinstance(s[2], str):
                     list2 = f(s[2], c)
 
                 if any(x in list1 for x in list2):
@@ -172,14 +189,14 @@ def create_mathjson_solver(solver_parameters):
                 return False
 
             def Contains_all_of(s):
-                if type(s[1]) == list and s[1][0] == "Array":
+                if isinstance(s[1], list) and s[1][0] == "Array":
                     list1 = [f(x, c) for x in s[1][1:]]
-                elif type(s[1]) == str:
+                elif isinstance(s[1], str):
                     list1 = f(s[1], c)
 
-                if type(s[2]) == list and s[2][0] == "Array":
+                if isinstance(s[2], list) and s[2][0] == "Array":
                     list2 = [f(x, c) for x in s[2][1:]]
-                elif type(s[2]) == str:
+                elif isinstance(s[2], str):
                     list2 = f(s[2], c)
 
                 if all(x in list1 for x in list2):
@@ -191,7 +208,7 @@ def create_mathjson_solver(solver_parameters):
 
             def Str(s):
                 if len(s) < 2:
-                    raise ValueError(f"Wrong parameters for 'Str'")
+                    raise ValueError("Wrong parameters for 'Str'")
                 return f"{f(s[1])}"
 
             def Not(s):
@@ -226,9 +243,11 @@ def create_mathjson_solver(solver_parameters):
                 "LessEqual": lambda s: f(s[1], c) <= f(s[2], c),
                 "NotEqual": lambda s: f(s[1], c) != f(s[2], c),
                 "Abs": lambda s: abs(f(s[1], c)),
-                "Round": lambda s: round(f(s[1], c), f(s[2], c))
-                if len(s) == 3
-                else int(round(f(s[1], c))),
+                "Round": lambda s: (
+                    round(f(s[1], c), f(s[2], c))
+                    if len(s) == 3
+                    else int(round(f(s[1], c)))
+                ),
                 "Max": Max,
                 "Min": Min,
                 "Average": Average,
@@ -271,3 +290,73 @@ def create_mathjson_solver(solver_parameters):
             return s
 
     return f
+
+
+def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set):
+    constructs = [
+        "Add",
+        "Sum",
+        "Subtract",
+        "Constants",
+        "Switch",
+        "If",
+        "Multiply",
+        "Divide",
+        "Negate",
+        "Power",
+        "Root",
+        "Sqrt",
+        "Square",
+        "Exp",
+        "Log",
+        "Log2",
+        "Log10",
+        "Equal",
+        "Greater",
+        "GreaterEqual",
+        "Less",
+        "LessEqual",
+        "NotEqual",
+        "Abs",
+        "Round",
+        "Max",
+        "Min",
+        "Average",
+        "Median",
+        "Length",
+        "Any",
+        "All",
+        "Array",
+        "In",
+        "Not_in",
+        "Contains_any_of",
+        "Contains_all_of",
+        "Contains_none_of",
+        "NotIn",
+        "ContainsAnyOf",
+        "ContainsAllOf",
+        "ContainsNoneOf",
+        "Int",
+        "Float",
+        "Str",
+        "Not",
+        "IsDefined",
+    ]
+    if isinstance(s, str):
+        if s in ignore_list:
+            return li
+        if s not in constructs:
+            li.add(s)
+        return li
+    elif isinstance(s, list):
+        if s[0] == "Constants":
+            for x in s[1:-1]:
+                ignore_list.add(x[0])
+                li.update(extract_variables(x[1], li, ignore_list))
+            li.update(extract_variables(x[-1], li, ignore_list))
+        else:
+            for x in s[1:]:
+                li.update(extract_variables(x, li, ignore_list))
+        return li
+    else:
+        return li

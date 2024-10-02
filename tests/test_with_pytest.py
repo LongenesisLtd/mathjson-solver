@@ -5,7 +5,7 @@ import re
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src/"))
 
-from mathjson_solver import create_solver, MathJSONException
+from mathjson_solver import create_solver, MathJSONException, extract_variables
 
 
 @pytest.mark.parametrize(
@@ -52,7 +52,11 @@ from mathjson_solver import create_solver, MathJSONException
         ({}, ["Array", 1, 2, 3, 5, 2], ["Array", 1, 2, 3, 5, 2]),
         ({}, ["Max", ["Array", 1, 2, 3, 5, 2]], 5),
         ({}, ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]], 9),
+        ({"a": ["Array", 1, 2, 3, 5, 2]}, ["Max", "a"], 5),
+        ({}, ["Min", ["Array", 1, 2, 3, 5, 2]], 1),
+        ({"a": ["Array", 2, 1, 3, 5, 2]}, ["Min", "a"], 1),
         ({}, ["Median", ["Array", 1, 2, 3, 5, 2]], 2),
+        ({"a": ["Array", 1, 2, 3, 5, 2]}, ["Median", "a"], 2),
         ({}, ["Average", ["Array", 1, 2, 3, 5, 2]], 2.6),
         (
             {},
@@ -80,8 +84,10 @@ from mathjson_solver import create_solver, MathJSONException
             5.0,
         ),
         ({}, ["Average", ["Array"]], None),
+        ({"a": ["Array", 2, 8]}, ["Average", "a"], 5),
         ({"a": 10, "b": 20}, ["Average", ["Array", "a", "b"]], 15),
         ({}, ["Length", ["Array", 1, 2, 3, 5, 2, 9]], 6),
+        ({"a": ["Array", 1, 2, 3, 5, 2, 9]}, ["Length", "a"], 6),
         ({}, ["Length", ["Array"]], 0),
         ({}, ["Int", "12"], 12),
         ({}, ["Int", "12.2"], 12),
@@ -206,3 +212,26 @@ def test_handle_exception():
         assert True
     else:
         assert False
+
+
+@pytest.mark.parametrize(
+    "parameters, expression, expected_result",
+    [
+        ({}, ["Add", 2, 4, 3], set()),
+        ({}, ["Sum", 2, "a", 3], set(["a"])),
+        ({"a": 5}, ["Sum", 2, "a", 3], set()),
+        ({"a": 5, "b": 6}, ["Sum", 2, "a", "c"], set(["c"])),
+        ({}, ["Constants", ["c", 1], ["d", ["Add", 2, "a"]], "d"], set(["a"])),
+        # Now with "ugly" variables that mimic the ones used for deep referencing.
+        (
+            {},
+            ["Add", "[slug1][0][question1]", "y", 4, "[slug1][-3:-1][question1]"],
+            set(["[slug1][0][question1]", "y", "[slug1][-3:-1][question1]"]),
+        ),
+    ],
+)
+def test_extract_variables(parameters, expression, expected_result):
+    assert (
+        extract_variables(expression, set(), set([x for x in parameters.keys()]))
+        == expected_result
+    )
