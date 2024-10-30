@@ -47,6 +47,86 @@ def is_numeric(x):
         return True
 
 
+def has_matching_sublist(
+    *,
+    my_list: list,
+    required_match_count: int,
+    position: int,
+    contiguous: bool,
+    conditions: list[bool],
+) -> bool:
+    if contiguous:
+        # Check for contiguous matches based on position
+        if position == 0:
+            # Check if the beginning of the list matches
+            count = sum(
+                1
+                for i in range(min(required_match_count, len(my_list)))
+                if conditions[i]
+            )
+            return count == required_match_count
+        elif position > 0:
+            # Skip the first `position` elements
+            count = sum(
+                1
+                for i in range(position, position + required_match_count)
+                if i < len(my_list) and conditions[i]
+            )
+            return count == required_match_count
+        elif position == -1:
+            # Check if the end of the list matches
+            count = sum(
+                1
+                for i in range(len(my_list) - required_match_count, len(my_list))
+                if conditions[i]
+            )
+            return count == required_match_count
+        elif position < -1:
+            # Skip the last `abs(position)` elements
+            count = sum(1 for i in range(len(my_list) + position) if conditions[i])
+            return count == required_match_count
+    else:
+        # Check for non-contiguous matches
+        count = sum(1 for i in range(len(my_list)) if conditions[i])
+        return count >= required_match_count
+
+
+def has_sublist2(
+    *,
+    my_list: list,
+    required_match_count: int,
+    position: int,
+    contiguous: bool,
+    condition: callable,
+) -> bool:
+    if contiguous:
+        # Check for contiguous matches based on position
+        if position == 0:
+            # Check if the beginning of the list matches
+            count = sum(1 for x in my_list[:required_match_count] if condition(x))
+            return count == required_match_count
+        elif position > 0:
+            # Skip the first `position` elements
+            count = sum(
+                1
+                for x in my_list[position : position + required_match_count]
+                if condition(x)
+            )
+            return count == required_match_count
+        elif position == -1:
+            # Check if the end of the list matches
+            count = sum(1 for x in my_list[-required_match_count:] if condition(x))
+            return count == required_match_count
+        elif position < -1:
+            # Skip the last `abs(position)` elements
+            count = sum(1 for x in my_list[:position] if condition(x))
+            return count == required_match_count
+    else:
+        # Check for non-contiguous matches
+        count = sum(1 for x in my_list if condition(x))
+        return count >= required_match_count
+
+
 def create_mathjson_solver(solver_parameters):
     def f(s, *args):
         if args:
@@ -60,6 +140,16 @@ def create_mathjson_solver(solver_parameters):
 
             def Arr(s):
                 return s
+
+            def Sum(s):
+                l_res = []
+                for x in s[1:]:
+                    res = f(x, c)
+                    if isinstance(res, list):
+                        l_res.append(sum([xx for xx in res[1:]]))
+                    else:
+                        l_res.append(res)
+                return sum(l_res)
 
             # @requires_array
             def Max(s):
@@ -214,9 +304,48 @@ def create_mathjson_solver(solver_parameters):
             def Not(s):
                 return not f(s[1])
 
+            def Map(s):
+                """
+                ["Map", list, function, more parameters]
+                The `function` must accept at least one parameter. That is for the current loop element.
+                The `more parameters` are for any additional parameters that function might have.
+                """
+                z = f(s[1], c)
+                if isinstance(z, list):
+                    retlist = ["Array"]
+                    for x in z[1:]:
+                        the_function_name = s[2][0]
+                        ss = [the_function_name, x] + s[3:]
+                        retlist.append(f(ss, c))
+                    return retlist
+
+            def HasMatchingSublist(s):
+                """
+                ["HasMatchingSublist", list, required_match_count, position, contiguous, function, more parameters]
+                """
+                the_list = f(s[1], c)[1:]
+                required_match_count = f(s[2], c)
+                position = f(s[3], c)
+                contiguous = f(s[4], c)
+                conditions = []
+
+                for i, x in enumerate(the_list):
+                    the_function_name = s[5][0]
+                    ss = [the_function_name, x] + s[6:]
+                    conditions.append(f(ss, c))
+                    pass
+
+                return has_matching_sublist(
+                    my_list=the_list,
+                    required_match_count=required_match_count,
+                    position=position,
+                    contiguous=contiguous,
+                    conditions=conditions,
+                )
+
             constructs = {
-                "Add": lambda s: sum([f(x, c) for x in s[1:]]),
-                "Sum": lambda s: sum([f(x, c) for x in s[1:]]),
+                "Sum": Sum,
+                "Add": Sum,
                 "Subtract": lambda s: reduce(
                     lambda a, b: a - b, [f(x, c) for x in s[1:]]
                 ),
@@ -270,6 +399,8 @@ def create_mathjson_solver(solver_parameters):
                 "Str": Str,
                 "Not": Not,
                 "IsDefined": lambda s: s[1] in c,
+                "Map": Map,
+                "HasMatchingSublist": HasMatchingSublist,
             }
             if s[0] in constructs:
                 try:
@@ -341,6 +472,8 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Str",
         "Not",
         "IsDefined",
+        "Map",
+        "HasMatchingSublist",
     ]
     if isinstance(s, str):
         if s in ignore_list:

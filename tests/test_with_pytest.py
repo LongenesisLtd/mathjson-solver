@@ -13,6 +13,10 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
     [
         ({}, ["Add", 2, 4, 3], 9),
         ({}, ["Sum", 2, 4, 3], 9),
+        ({}, ["Sum", ["Array", 1, 1], 4, 3], 9),
+        ({}, ["Sum", ["Array", 2, 4, 3]], 9),
+        ({"a": 2}, ["Sum", "a", 4, 3], 9),
+        ({"a": ["Array", 1, 1]}, ["Sum", "a", 4, 3], 9),
         ({}, ["Subtract", 10, 5, 2], 3),
         ({}, ["Add", 5, 4, ["Negate", 3]], 6),
         ({}, ["Multiply", 2, 3, 4], 24),
@@ -168,6 +172,93 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Not", True], False),
         ({}, ["Not", 0], True),
         ({}, ["Not", ["In", 2, ["Array", 1, 2, 3]]], False),
+        ({}, ["Array", 2, 4, 3], ["Array", 2, 4, 3]),
+        ({}, ["Map", ["Array", 1, 2, 3], ["Square"]], ["Array", 1, 4, 9]),
+        ({}, ["Map", ["Array", 1, 2, 3], ["Power"], 2], ["Array", 1, 4, 9]),
+        (
+            {},
+            ["Map", ["Array", 1, 2, 3], ["GreaterEqual"], 2],
+            ["Array", False, True, True],
+        ),
+        # ["HasMatchingSublist", list, required_match_count, position, contiguous, function, more parameters]
+        (
+            {},
+            [
+                "HasMatchingSublist",
+                ["Array", 1, 2, 3, 4, 5, 6],
+                3,
+                0,
+                True,
+                ["GreaterEqual"],
+                1,
+            ],
+            True,  # first 3 elements are greater than 3
+        ),
+        (
+            {},
+            [
+                "HasMatchingSublist",
+                ["Array", 1, 2, 3, 4, 5, 6],
+                3,
+                0,
+                True,
+                ["GreaterEqual"],
+                2,
+            ],
+            False,  # first 3 elements are greater than 3 - False
+        ),
+        (
+            {},
+            [
+                "HasMatchingSublist",
+                ["Array", 1, 2, 3, 4, 5, 6],
+                3,
+                0,
+                False,  # anywhere
+                ["GreaterEqual"],
+                4,
+            ],
+            True,
+        ),
+        (
+            {},
+            [
+                "HasMatchingSublist",
+                ["Array", 1, 2, 3, 4, 5, 6],
+                4,
+                0,
+                False,  # anywhere
+                ["GreaterEqual"],
+                4,
+            ],
+            False,
+        ),
+        (
+            {},
+            [
+                "HasMatchingSublist",
+                ["Array", 1, 2, 3, 4, 5, 6],
+                3,
+                -1,
+                True,
+                ["GreaterEqual"],
+                4,
+            ],
+            True,
+        ),
+        (
+            {},
+            [
+                "HasMatchingSublist",
+                ["Array", 1, 2, 3, 4, 5, 6],
+                5,
+                -1,
+                True,
+                ["GreaterEqual"],
+                4,
+            ],
+            False,
+        ),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
