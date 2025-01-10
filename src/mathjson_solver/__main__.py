@@ -487,6 +487,11 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
                 ignore_list.add(x[0])
                 li.update(extract_variables(x[1], li, ignore_list))
             li.update(extract_variables(x[-1], li, ignore_list))
+        elif s[0] == "If":
+            for elif_block in s[1:-1]:  # s[1] is list
+                for x in elif_block:
+                    li.update(extract_variables(x, li, ignore_list))
+            li.update(extract_variables(s[-1], li, ignore_list))
         else:
             for x in s[1:]:
                 li.update(extract_variables(x, li, ignore_list))

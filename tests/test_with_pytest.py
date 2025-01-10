@@ -319,6 +319,21 @@ def test_handle_exception():
             ["Add", "[slug1][0][question1]", "y", 4, "[slug1][-3:-1][question1]"],
             set(["[slug1][0][question1]", "y", "[slug1][-3:-1][question1]"]),
         ),
+        (
+            {},
+            ["If", [["Equal", "[uzwuoy][-1][question1]", 200], 200], 1],
+            set(["[uzwuoy][-1][question1]"]),
+        ),
+        (
+            {},
+            [
+                "If",
+                [["Equal", "[uzwuoy][-1][question1]", 200], 201],
+                [["Equal", "[uzwuoy][-2][question1]", 100], 101],
+                1,
+            ],
+            set(["[uzwuoy][-1][question1]", "[uzwuoy][-2][question1]"]),
+        ),
     ],
 )
 def test_extract_variables(parameters, expression, expected_result):
