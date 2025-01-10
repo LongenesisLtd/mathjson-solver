@@ -259,6 +259,13 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
             ],
             False,
         ),
+        ({}, ["Strftime", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], "%Y"], "2025"),
+        ({}, ["Strftime", ["Today"], "%Y"], "2025"),
+        ({}, ["Strftime", ["Now"], "%Y"], "2025"),
+        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaDays", 3]], "%d"], "13"),
+        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaMinutes", 5]], "%M"], "10"),
+        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaHours", 2]], "%H"], "12"),
+        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaWeeks", 1]], "%d"], "17"),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):

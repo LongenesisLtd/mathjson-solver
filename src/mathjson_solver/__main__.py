@@ -6,6 +6,7 @@ from copy import deepcopy
 from statistics import median
 import logging
 import traceback
+import datetime
 
 
 class MathJSONException(Exception):
@@ -140,6 +141,31 @@ def create_mathjson_solver(solver_parameters):
 
             def Arr(s):
                 return s
+
+            def Add(s):
+                l_res = []
+                tmp = 0
+                for i, x in enumerate(s[1:]):
+                    res = f(x, c)
+                    if i ==0:
+                        tmp = res
+                    else:
+                        tmp = tmp + res
+
+                    # if isinstance(res, list):
+                    #     l_res.append(sum([xx for xx in res[1:]]))
+                    # else:
+                    #     l_res.append(res)
+
+                return tmp
+
+                # tmp = 0
+                # for i, x in enumerate(l):
+                #     if i == 0:
+                #         tmp = x
+                #     else:
+                #         tmp = tmp + x
+                # return tmp
 
             def Sum(s):
                 l_res = []
@@ -343,9 +369,37 @@ def create_mathjson_solver(solver_parameters):
                     conditions=conditions,
                 )
 
+            def Strptime(s):
+                datetime_str = f(s[1], c)
+                parameters = f(s[2], c)
+                return datetime.datetime.strptime(datetime_str, parameters)
+
+            def Strftime(s):
+                dt = f(s[1], c)
+                parameters = f(s[2], c)
+                return dt.strftime(parameters)
+
+            def Now(s):
+                return datetime.datetime.now()
+
+            def Today(s):
+                return datetime.date.today()
+
+            def TimeDeltaDays(s):
+                return datetime.timedelta(days=f(s[1], c))
+
+            def TimeDeltaMinutes(s):
+                return datetime.timedelta(minutes=f(s[1], c))
+
+            def TimeDeltaHours(s):
+                return datetime.timedelta(hours=f(s[1], c))
+
+            def TimeDeltaWeeks(s):
+                return datetime.timedelta(weeks=f(s[1], c))
+
             constructs = {
                 "Sum": Sum,
-                "Add": Sum,
+                "Add": Add,
                 "Subtract": lambda s: reduce(
                     lambda a, b: a - b, [f(x, c) for x in s[1:]]
                 ),
@@ -401,6 +455,14 @@ def create_mathjson_solver(solver_parameters):
                 "IsDefined": lambda s: s[1] in c,
                 "Map": Map,
                 "HasMatchingSublist": HasMatchingSublist,
+                "Strptime": Strptime,
+                "Strftime": Strftime,
+                "Today": Today,
+                "Now": Now,
+                "TimeDeltaWeeks": TimeDeltaWeeks,
+                "TimeDeltaHours": TimeDeltaHours,
+                "TimeDeltaMinutes": TimeDeltaMinutes,
+                "TimeDeltaDays": TimeDeltaDays,
             }
             if s[0] in constructs:
                 try:
