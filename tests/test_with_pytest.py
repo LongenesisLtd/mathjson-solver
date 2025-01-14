@@ -93,6 +93,9 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Length", ["Array", 1, 2, 3, 5, 2, 9]], 6),
         ({"a": ["Array", 1, 2, 3, 5, 2, 9]}, ["Length", "a"], 6),
         ({}, ["Length", ["Array"]], 0),
+        # Next test illustrates an invalid formula, where 'Length' receives an invalid array.
+        ({}, ["Length", ["Greater", ["Array", 3, 5, 6, 4, 8, 1, 0, 1], 5]], 2),
+        ({}, ["Sum", ["Array", True, False, True, False, False]], 2),
         ({}, ["Int", "12"], 12),
         ({}, ["Int", "12.2"], 12),
         ({}, ["Float", "12.2"], 12.2),
@@ -180,6 +183,17 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
             ["Map", ["Array", 1, 2, 3], ["GreaterEqual"], 2],
             ["Array", False, True, True],
         ),
+
+        (
+            {},
+            ["Sum", ["Map", ["Array", 1, 2, 3, 4, 1, 1, 0, 1], ["GreaterEqual"], 2]],
+            3,
+        ),
+
+
+        ({}, ["Sum", ["Array", True, False, True, False, False]], 2),
+
+
         # ["HasMatchingSublist", list, required_match_count, position, contiguous, function, more parameters]
         (
             {},
