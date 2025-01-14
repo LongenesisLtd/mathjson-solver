@@ -410,6 +410,7 @@ def create_mathjson_solver(solver_parameters):
                     lambda a, b: float(a) * float(b), [f(x, c) for x in s[1:]]
                 ),
                 "Divide": lambda s: f(s[1], c) / f(s[2], c),
+                "Rational": lambda s: f(s[1], c) / f(s[2], c),
                 "Negate": lambda s: -f(s[1], c),
                 "Power": lambda s: pow(f(s[1], c), f(s[2], c)),
                 "Root": lambda s: pow(f(s[1], c), 1.0 / f(s[2], c)),
@@ -417,6 +418,7 @@ def create_mathjson_solver(solver_parameters):
                 "Square": lambda s: pow(f(s[1], c), 2),
                 "Exp": lambda s: math.exp(f(s[1], c)),
                 "Log": lambda s: math.log(f(s[1], c)),
+                "Ln": lambda s: math.log(f(s[1], c)),
                 "Log2": lambda s: math.log2(f(s[1], c)),
                 "Log10": lambda s: math.log10(f(s[1], c)),
                 "Equal": lambda s: f(s[1], c) == f(s[2], c),
