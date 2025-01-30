@@ -47,7 +47,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"x": 1}, ["Add", 2, "x"], 3),
         ({"value": 1}, ["Switch", "value", 0, [1, 11], [2, 22]], 11),
         ({"value": 3}, ["Switch", "value", 0, [1, 11], [2, 22]], 0),
-        ({"[uzwuoy][-1][14]": 3}, ["Switch", "value", 0, [1, 11], [2, 22]], 0),
+        ({"[uzwuoy][-1][14]": 1}, ["Switch", "value", 0, [1, 11], [2, 22]], 0),
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
