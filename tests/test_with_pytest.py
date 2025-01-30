@@ -47,8 +47,44 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"x": 1}, ["Add", 2, "x"], 3),
         ({"value": 1}, ["Switch", "value", 0, [1, 11], [2, 22]], 11),
         ({"value": 3}, ["Switch", "value", 0, [1, 11], [2, 22]], 0),
-        ({"[uzwuoy][-1][14]": 1}, ["Switch", "[uzwuoy][-1][14]", 0, [1, 11], [2, 22]], 11),
+        (
+            {"[uzwuoy][-1][14]": 1},
+            ["Switch", "[uzwuoy][-1][14]", 0, [1, 11], [2, 22]],
+            11,
+        ),
         ({"14": 1}, ["Switch", "14", 0, [1, 11], [2, 22]], 11),
+        ({"14": "1"}, ["Switch", "14", 0, ["0", 0], ["1", 1], ["2", 2]], 1),
+        ({"29": "1"}, ["Switch", "29", 0, ["0", 0], ["1", 1], ["2", 2]], 1),
+        (
+            {"14": "1", "29": "1"},
+            [
+                "Add",
+                ["Switch", "14", 0, ["0", 0], ["1", 1], ["2", 2]],
+                ["Switch", "29", 0, ["0", 0], ["1", 1], ["2", 2]],
+            ],
+            2,
+        ),
+        # The following test works.
+        # It is commented out because otherwise black auto-formatter would expand it to 100+ lines
+        # (
+        #     {"14": "1", "29": "1", "30": "1", "31": "1", "32": "1", "33": "1", "35": "1", "45": "1", "50": "1", "52": "1", "71": "1", "91": "1", "112": "1"},
+        #     ["Add",
+        #       ["Switch","14",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","29",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","30",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","31",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","32",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","33",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","35",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","45",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","50",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","52",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","71",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","91",0,["0",0],["1",1],["2",2]],
+        #       ["Switch","112",0,["0",0],["1",1],["2",2]]
+        #     ],
+        #     13
+        # ),
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
@@ -187,17 +223,12 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
             ["Map", ["Array", 1, 2, 3], ["GreaterEqual"], 2],
             ["Array", False, True, True],
         ),
-
         (
             {},
             ["Sum", ["Map", ["Array", 1, 2, 3, 4, 1, 1, 0, 1], ["GreaterEqual"], 2]],
             3,
         ),
-
-
         ({}, ["Sum", ["Array", True, False, True, False, False]], 2),
-
-
         # ["HasMatchingSublist", list, required_match_count, position, contiguous, function, more parameters]
         (
             {},
@@ -277,14 +308,78 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
             ],
             False,
         ),
-        ({}, ["Strftime", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], "%Y"], "2025"),
+        (
+            {},
+            ["Strftime", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], "%Y"],
+            "2025",
+        ),
         ({}, ["Strftime", ["Today"], "%Y"], "2025"),
         ({}, ["Strftime", ["Now"], "%Y"], "2025"),
-        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaDays", 3]], "%d"], "13"),
-        ({}, ["Strftime", ["Subtract", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaDays", 3]], "%d"], "07"),
-        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaMinutes", 5]], "%M"], "10"),
-        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaHours", 2]], "%H"], "12"),
-        ({}, ["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaWeeks", 1]], "%d"], "17"),
+        (
+            {},
+            [
+                "Strftime",
+                [
+                    "Add",
+                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
+                    ["TimeDeltaDays", 3],
+                ],
+                "%d",
+            ],
+            "13",
+        ),
+        (
+            {},
+            [
+                "Strftime",
+                [
+                    "Subtract",
+                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
+                    ["TimeDeltaDays", 3],
+                ],
+                "%d",
+            ],
+            "07",
+        ),
+        (
+            {},
+            [
+                "Strftime",
+                [
+                    "Add",
+                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
+                    ["TimeDeltaMinutes", 5],
+                ],
+                "%M",
+            ],
+            "10",
+        ),
+        (
+            {},
+            [
+                "Strftime",
+                [
+                    "Add",
+                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
+                    ["TimeDeltaHours", 2],
+                ],
+                "%H",
+            ],
+            "12",
+        ),
+        (
+            {},
+            [
+                "Strftime",
+                [
+                    "Add",
+                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
+                    ["TimeDeltaWeeks", 1],
+                ],
+                "%d",
+            ],
+            "17",
+        ),
     ],
 )
 def test_solver_simple(parameters, expression, expected_result):
