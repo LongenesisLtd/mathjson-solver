@@ -45,6 +45,8 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Constants", ["a", 1], ["b", 2], ["c", 100], ["Sum", "a", "b"]], 3),
         ({}, ["Constants", ["a", 1], ["b", ["Add", 2, "a"]], "b"], 3),
         ({"x": 1}, ["Add", 2, "x"], 3),
+        ({"value": 1}, ["Switch", "value", 0, [1, 11], [2, 22]], 11),
+        ({"value": 3}, ["Switch", "value", 0, [1, 11], [2, 22]], 0),
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
