@@ -64,6 +64,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
             ],
             2,
         ),
+        ({}, ["Switch", "14", 6, ["0", 0], ["1", 1], ["2", 2]], 6),
         # The following test works.
         # It is commented out because otherwise black auto-formatter would expand it to 100+ lines
         # (
