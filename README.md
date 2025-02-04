@@ -202,7 +202,7 @@ elif 2 == 2 then 20
 else 9000
 ```
 
-`If` expression do not need to be strictly _boolean_. Any value that is not _false_ are considered _true_.
+`If` expressions do not need to be strictly _boolean_. Any value that is not _false_ are considered _true_.
 
 ### Switch-Case statement
 ```
