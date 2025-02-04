@@ -55,6 +55,8 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"14": 1}, ["Switch", "14", 0, [1, 11], [2, 22]], 11),
         ({"14": "1"}, ["Switch", "14", 0, ["0", 0], ["1", 1], ["2", 2]], 1),
         ({"29": "1"}, ["Switch", "29", 0, ["0", 0], ["1", 1], ["2", 2]], 1),
+        ({"29": "2"}, ["Switch", "29", 0, ["0", 0], ["1", 1], ["2", 2]], 2),
+        ({"a": "a"}, ["Switch", "a", 0, ["0", 0], ["1", 1], ["2", 2]], 0),
         (
             {"14": "1", "29": "1"},
             [
@@ -65,6 +67,17 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
             2,
         ),
         ({}, ["Switch", "14", 6, ["0", 0], ["1", 1], ["2", 2]], 6),
+        ({}, ["Switch", "1", 6, ["0", 0], ["1", 1], ["2", 2]], 1),  # BKUS
+        (
+            {"1": "2"},
+            ["Switch", "1", 6, ["0", 0], ["1", 1], ["2", 2]],
+            1,
+        ),  # Because all "1"s become "2"
+        (
+            {"1": "3"},
+            ["Switch", "1", 6, ["0", 0], ["1", 1], ["2", 2]],
+            1,
+        ),  # Because string "1" is equal string "1"
         # The following test works.
         # It is commented out because otherwise black auto-formatter would expand it to 100+ lines
         # (
@@ -93,6 +106,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"a": 10, "b": 10}, ["If", [["Equal", "a", "b"], 10], 9000], 10),
         ({"a": 10, "b": 20}, ["If", [["Equal", "a", "b"], 10], 9000], 9000),
         ({"a": 10}, ["If", [["Equal", "a", "b"], 10], 9000], 9000),
+        # The following test checks if Sum failure (1+"b") is handled correctly in If.
         ({"a": 10}, ["If", [["Equal", "a", ["Sum", 1, "b"]], 10], 9000], 9000),
         ({}, ["Array", 1, 2, 3, 5, 2], ["Array", 1, 2, 3, 5, 2]),
         ({}, ["Max", ["Array", 1, 2, 3, 5, 2]], 5),

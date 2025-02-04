@@ -6,14 +6,6 @@ _MathJSON Solver_ is a Python module to numerically evaluate MathJSON expression
 
 Please ask questions and share feedback in our Gitter chat [https://gitter.im/mathjson-solver/community](https://gitter.im/mathjson-solver/community).
 
-## What's new
-
-### 1.4.2
-Added `Str` construct. It tries to convert value to string.
-
-### 1.4.0
-We changed the behavior of `Average` to be more forgiving. In version 1.4.0 `Average` accepts arrays like `[2, 4 ,"6"]` and internally converts numeric strings to floats.
-Also, it skips values that cannot be converted to numeric. Internally `Average` will convert array `[2, "three", 4 ,"6"]` to `[2.0, 4.0 ,6.0]`. When given an empty array, `Average` now returns `None` instead of throwing an error.
 
 ## How to use
 ```python
@@ -29,75 +21,64 @@ print(answer)
 # 9, because 2+3+4=9
 ```
 
-## How to run tests
-Make sure you have `pytest` installed. Then `cd` into project directory and run:
-```bash
-pytest
-```
-
-## Contributing Code
-
-We welcome your contributions in the form of pull requests.
-
-1. Fork the repo;
-2. Make improvements;
-3. Make a pull request to share your improvements with the community and to include it into official release.
-
-
 ## Currently supported constructs
-### Math
-* `Sum` (alias `Add`)
-* `Subtract`
-* `Multiply`
-* `Divide`
-* `Negate`
-* `Power`
-* `Root`
-* `Sqrt`
-* `Square`
-* `Exp`
-* `Log`
-* `Log2`
-* `Log10`
-
-
-### Aggregation
-* `Array`
-* `Max`
-* `Min`
-* `Average`
-* `Median`
-* `Len`
-* `All`
-* `Any`
-
-
-### Conditions
-* `If`
-* `Switch`
-* `Equal`
-* `Greater`
-* `GreaterEqual`
-* `Less`
-* `LessEqual`
-* `NotEqual`
-
-### Membership operators
-* `In`
-* `NotIn`
-* `ContainsAnyOf`
-* `ContainsAllOf`
-* `ContainsNoneOf`
-
-### Typecasting
-* `Str`
-* `Int`
-* `Float`
-* `Not`
-
-### Additional constructs
-* `Constants`
-
+* `Add` - Iteratively adds up the given values. Compatible with time delta.
+* `Sum` - Internally uses python's `sum`. Not compatible with time delta.
+* `Subtract` -
+* `Constants` -
+* `Switch` -
+* `If` -
+* `Multiply` -
+* `Divide` -
+* `Negate` -
+* `Power` -
+* `Root` -
+* `Sqrt` -
+* `Square` -
+* `Exp` -
+* `Log` -
+* `Log2` -
+* `Log10` -
+* `Equal` -
+* `Greater` -
+* `GreaterEqual` -
+* `Less` -
+* `LessEqual` -
+* `NotEqual` -
+* `Abs` -
+* `Round` -
+* `Max` -
+* `Min` -
+* `Average` - Internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver.
+* `Median` -
+* `Length` -
+* `Any` -
+* `All` -
+* `Array` -
+* `In` -
+* `Not_in` -
+* `Contains_any_of` -
+* `Contains_all_of` -
+* `Contains_none_of` -
+* `NotIn` -
+* `ContainsAnyOf` -
+* `ContainsAllOf` -
+* `ContainsNoneOf` -
+* `Int` -
+* `Float` -
+* `Str` -
+* `Not` -
+* `IsDefined` - Checks if a value is in parameters.
+* `Map` -
+* `HasMatchingSublist` -
+* `Strptime` -
+* `Strftime` -
+* `Today` -
+* `Now` -
+* `TimeDeltaWeeks` -
+* `TimeDeltaHours` -
+* `TimeDeltaMinutes` -
+* `TimeDeltaDays` -
 
 ## Examples
 ```python
@@ -252,3 +233,18 @@ except MathJSONException:
 ```
 
 Left unhandled, the exception will look like `MathJSONException("Problem in Divide. ['Divide', 1, 0]. division by zero")`.
+
+
+## How to run tests
+Make sure you have `pytest` installed. Then `cd` into project directory and run:
+```bash
+pytest
+```
+
+## Contributing Code
+
+We welcome your contributions in the form of pull requests.
+
+1. Fork the repo;
+2. Make improvements;
+3. Make a pull request to share your improvements with the community and to include it into official release.

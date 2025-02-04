@@ -147,7 +147,7 @@ def create_mathjson_solver(solver_parameters):
                 tmp = 0
                 for i, x in enumerate(s[1:]):
                     res = f(x, c)
-                    if i ==0:
+                    if i == 0:
                         tmp = res
                     else:
                         tmp = tmp + res
@@ -467,7 +467,17 @@ def create_mathjson_solver(solver_parameters):
             if s[0] in constructs:
                 try:
                     return constructs[s[0]](s)
-                except Exception as e:
+
+                # except RecursionError:
+                #     return s[0]
+                # except Exception as e:
+                except TypeError as e:
+                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                except ValueError as e:
+                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                except IndexError as e:
+                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                except ZeroDivisionError as e:
                     raise MathJSONException(e, s, mathjson_construct=s[0])
             else:
                 # raise MathJSONException(
@@ -475,7 +485,10 @@ def create_mathjson_solver(solver_parameters):
                 # )
                 return s
         elif s in solver_parameters:
-            return f(solver_parameters[s], c)
+            try:
+                return f(solver_parameters[s], c)
+            except RecursionError:
+                return solver_parameters[s]
         elif s in c:
             return f(c[s], c)
         else:
@@ -536,6 +549,14 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "IsDefined",
         "Map",
         "HasMatchingSublist",
+        "Strptime",
+        "Strftime",
+        "Today",
+        "Now",
+        "TimeDeltaWeeks",
+        "TimeDeltaHours",
+        "TimeDeltaMinutes",
+        "TimeDeltaDays",
     ]
     if isinstance(s, str):
         if s in ignore_list:
