@@ -2,10 +2,9 @@
 
 [![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions. It was created by [Longenesis](https://longenesis.com/team) to add numerical evaluation capability of user generated mathematical expressions in Longenesis digital health products and later released as open source project. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
+_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions, like `["Add", 1, 2]`. It is developed by [Longenesis](https://longenesis.com/team) to enable numerical evaluation of user provided mathematical expressions in Longenesis digital health products. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
 
 Please ask questions and share feedback in our Gitter chat [https://gitter.im/mathjson-solver/community](https://gitter.im/mathjson-solver/community).
-
 
 ## How to use
 ```python
@@ -22,29 +21,32 @@ print(answer)
 ```
 
 ## Currently supported constructs
-* `Add` - Iteratively adds up the given values. Compatible with time delta.
-* `Sum` - Internally uses python's `sum`. Not compatible with time delta.
-* `Subtract` -
+
+<div style="columns: 2;">
+
+* [Sum](#sum)
+* [Add](#add)
+* [Negate](#negate)
+* [Subtract](#subtract)
 * `Constants` -
 * `Switch` -
 * `If` -
-* `Multiply` -
-* `Divide` -
-* `Negate` -
-* `Power` -
-* `Root` -
-* `Sqrt` -
-* `Square` -
-* `Exp` -
-* `Log` -
-* `Log2` -
-* `Log10` -
-* `Equal` -
-* `Greater` -
-* `GreaterEqual` -
-* `Less` -
-* `LessEqual` -
-* `NotEqual` -
+* [Multiply](#multiply)
+* [Divide](#divide)
+* [Power](square-and-power) -
+* [Square](square-and-power) -
+* [Root](#root-and-square-root)
+* [Sqrt](#root-and-square-root)
+* [Exp](#exponents-and-logarithms)
+* [Log](#exponents-and-logarithms)
+* [Log2](#exponents-and-logarithms)
+* [Log10](#exponents-and-logarithms)
+* [Equal](#equality-greater-than-less-than)
+* [NotEqual](#equality-greater-than-less-than)
+* [Greater](#equality-greater-than-less-than)
+* [GreaterEqual](#equality-greater-than-less-than)
+* [Less](#equality-greater-than-less-than)
+* [LessEqual](#equality-greater-than-less-than)
 * `Abs` -
 * `Round` -
 * `Max` -
@@ -80,26 +82,102 @@ print(answer)
 * `TimeDeltaMinutes` -
 * `TimeDeltaDays` -
 
+</div>
+
 ## Examples
+
+### Sum
+Adds up the given values. `Sum` internally uses Python's `sum` function. Not compatible with time delta. It is intended that supporting expression builders render `["Sum", 2, 4, 3]` as _∑(2, 4, 3)_.
+```python
+["Sum", 2, 4, 3]                  # ∑(2, 4, 3)=9
+```
+
+### Add
+Almost the same as `Sum`, but instead of using Python's `sum()`, `Add` iteratively adds up the given values. Compatible with time delta. It is intended that supporting expression builders render `["Add", 2, 4, 3]` as _2+4+3_.
 ```python
 ["Add", 2, 4, 3]                  # 2+4+3=9
-["Subtract", 10, 5, 2]            # 10-5-2=3
+```
+
+### Negate
+Inverts the sign.
+```python
+["Negate", 3]                     # -(3)=-3
+["Negate", -3]                    # -(-3)=3
 ["Add", 5, 4, ["Negate", 3]]      # 5+4+(-3)=6
+```
+
+### Subtract
+Performs basic subtraction.
+```python
+["Subtract", 10, 5, 2]            # 10-5-2=3
+```
+
+### Multiply
+Performs basic multiplication.
+```python
+["Multiply", 2, 4]                # 2*4=8
 ["Multiply", 2, 3, 4]             # 2*3*4=24
+```
+
+### Divide
+Performs a division.
+```python
 ["Divide", 10, 5]                 # 10/5=2.0
 ["Divide", 10, 4]                 # 10/4=2.5
+["Divide", 1, 3]                  # 1/3=0.33333333333...
+```
+
+### Square and Power
+`Power` raises a number to given power. `Square` is a special case of `Power`.
+```python
 ["Power", 2, 3]                   # 2^3=8
+["Square", 4]                     # 4^2=16
+```
+
+### Root and square root
+```python
 ["Root", 9, 2]                    # √9=3.0
 ["Root", 8, 3]                    # ∛8=2.0
 ["Sqrt", 9]                       # √9=3.0
-["Square", 4]                     # 4^2=16
+```
+
+### Exponents and logarithms
+```python
 ["Exp", 2]                        # e^2≅7.389
-["Divide", 10, ["Add", 2+3]]      # 10/(2+3)=10/5=2
 ["Log", 2.7183]                   # ln(2.7183)≅1.0000
 ["Log2", 8]                       # log2(8)=3.0
 ["Log10", 1000]                   # log10(1000)=3.0
+```
+
+### Equality, greater than, less than
+```python
 ["Equal", 10, 10]                 # 10==10 = True
 ["Equal", 10, 12]                 # 10==12 = False
+["Equal", "aaa", "aaa"]           # "aaa" == "aaa" ➞ True
+["Equal", "aaa", "bbb"]           # "aaa" == "bbb" ➞ False
+
+["NotEqual", 1, 1]                # 1≠1 ➞  False
+["NotEqual", 1, 2]                # 1≠2 ➞  True
+["NotEqual", "aaa", "bbb"]        # "aaa≠"bbb" ➞  True
+["NotEqual", "aaa", 0]            # "aaa≠0 ➞  True
+
+["Greater", 1, 2]                 # 1>2 ➞ False
+["Greater", 2, -2]                # 2>-2 ➞  True
+
+["GreaterEqual", 1, 1]            # 1⩾1 ➞  True
+["GreaterEqual", 2, 1]            # 2⩾1 ➞  True
+["GreaterEqual", 1, 2]            # 1⩾2 ➞  False
+
+["Less", 1, 1]                    # 1<1 ➞  False
+["Less", 1, 2]                    # 1<2 ➞  True
+["LessEqual", 1, 1]               # 1⩽1 ➞  True
+["LessEqual", 1, 2]               # 1⩽2 ➞  True
+```
+
+
+
+### Other examples
+```python
 ["Abs", -3.5]                     # |-3.5| = 3.5
 ["Round", -5.123456, 2]           # -5.12
 ["Round", -5.123456, 0]           # -5.0
@@ -134,6 +212,7 @@ print(answer)
 ["ContainsAnyOf", ["Array", 1, 2, 3], ["Array", 4, 5, 6]]        # False
 ["ContainsAllOf", ["Array", 1, 2, 3], ["Array", 1, 2, 3]]        # True
 ["ContainsAllOf", ["Array", 1, 2], ["Array", 1, 2, 3]]           # False
+["Divide", 10, ["Add", 2+3]]      # 10/(2+3)=10/5=2
 ```
 
 ### Constants

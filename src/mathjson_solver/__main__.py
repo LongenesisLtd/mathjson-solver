@@ -397,6 +397,10 @@ def create_mathjson_solver(solver_parameters):
             def TimeDeltaWeeks(s):
                 return datetime.timedelta(weeks=f(s[1], c))
 
+            def IsDefined(s):
+                # Todo: This does not work
+                return s[1] in c.keys()
+
             constructs = {
                 "Sum": Sum,
                 "Add": Add,
@@ -452,7 +456,8 @@ def create_mathjson_solver(solver_parameters):
                 "Float": Float,
                 "Str": Str,
                 "Not": Not,
-                "IsDefined": lambda s: s[1] in c,
+                # "IsDefined": lambda s: s[1] in c,
+                "IsDefined": IsDefined,
                 "Map": Map,
                 "HasMatchingSublist": HasMatchingSublist,
                 "Strptime": Strptime,
