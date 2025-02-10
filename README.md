@@ -1,6 +1,9 @@
 # MathJSON Solver
 
+[![Python application](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml)
 [![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+
 
 _MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions, like `["Add", 1, 2]`. It is developed by [Longenesis](https://longenesis.com/team) to enable numerical evaluation of user provided mathematical expressions in Longenesis digital health products. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
 
