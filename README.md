@@ -1,5 +1,7 @@
 # MathJSON Solver
 
+[![Python application](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml)
+
 [![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 _MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions, like `["Add", 1, 2]`. It is developed by [Longenesis](https://longenesis.com/team) to enable numerical evaluation of user provided mathematical expressions in Longenesis digital health products. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
@@ -166,9 +168,9 @@ Performs a division.
 ["Log10", 1000]                   # log10(1000)=3.0
 ```
 
-#### Conditionality
+### Conditionality
 
-### Equality, greater than, less than
+#### Equality, greater than, less than
 ```python
 ["Equal", 10, 10]                 # 10==10 = True
 ["Equal", 10, 12]                 # 10==12 = False
@@ -202,7 +204,7 @@ _MathJSON Solver_ supports static arrays and arrays given as parameters. Arrays 
 
 A static array is defined as `["Array", 1, 2, 3]` and when evaluated, results to the same `["Array", 1, 2, 3]`.
 
-An array can be given as a parameter. In this case, the array is defined in the parameters dictionary and referred to by its name. For example, `parameters = {"a": ["Array", 1, 2, 3]}` and then the expression `["Max", "a"]` will result in 3.
+An array can also be given as a parameter. In this case, the array is defined in the parameters dictionary and referred to by its name. For example, `parameters = {"a": ["Array", 1, 2, 3]}` and then the expression `["Max", "a"]` will result in 3.
 
 Here is a full example with Sum:
 ```python
