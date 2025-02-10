@@ -16,6 +16,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Sum", ["Array", 1, 1], 4, 3], 9),
         ({}, ["Sum", ["Array", 2, 4, 3]], 9),
         ({"a": 2}, ["Sum", "a", 4, 3], 9),
+        ({"a": ["Array", 1, 1]}, ["Sum", "a"], 2),
         ({"a": ["Array", 1, 1]}, ["Sum", "a", 4, 3], 9),
         ({}, ["Subtract", 10, 5, 2], 3),
         ({}, ["Add", 5, 4, ["Negate", 3]], 6),
@@ -133,6 +134,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"a": ["Array", 2, 1, 3, 5, 2]}, ["Min", "a"], 1),
         ({}, ["Median", ["Array", 1, 2, 3, 5, 2]], 2),
         ({"a": ["Array", 1, 2, 3, 5, 2]}, ["Median", "a"], 2),
+        ({}, ["Average", ["Array", 2, "three", 4, "6"]], 4),
         ({}, ["Average", ["Array", 1, 2, 3, 5, 2]], 2.6),
         (
             {},

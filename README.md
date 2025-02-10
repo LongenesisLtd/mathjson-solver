@@ -22,7 +22,8 @@ print(answer)
 
 ## Currently supported constructs
 
-<div style="columns: 2;">
+
+<div style="float: left; width: 33%;">
 
 * [Sum](#sum)
 * [Add](#add)
@@ -47,16 +48,22 @@ print(answer)
 * [GreaterEqual](#equality-greater-than-less-than)
 * [Less](#equality-greater-than-less-than)
 * [LessEqual](#equality-greater-than-less-than)
+
+</div>
+
+
+<div style="float: left; width: 33%;">
+
+* [Array](#array)
+* [Average](#average)
 * `Abs` -
 * `Round` -
 * `Max` -
 * `Min` -
-* `Average` - Internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver.
 * `Median` -
 * `Length` -
 * `Any` -
 * `All` -
-* `Array` -
 * `In` -
 * `Not_in` -
 * `Contains_any_of` -
@@ -71,6 +78,12 @@ print(answer)
 * `Str` -
 * `Not` -
 * `IsDefined` - Checks if a value is in parameters.
+
+</div>
+
+
+<div style="float: left; width: 33%;">
+
 * `Map` -
 * `HasMatchingSublist` -
 * `Strptime` -
@@ -84,21 +97,25 @@ print(answer)
 
 </div>
 
+
+
 ## Examples
 
-### Sum
+#### Basic math
+
+#### Sum
 Adds up the given values. `Sum` internally uses Python's `sum` function. Not compatible with time delta. It is intended that supporting expression builders render `["Sum", 2, 4, 3]` as _∑(2, 4, 3)_.
 ```python
 ["Sum", 2, 4, 3]                  # ∑(2, 4, 3)=9
 ```
 
-### Add
+#### Add
 Almost the same as `Sum`, but instead of using Python's `sum()`, `Add` iteratively adds up the given values. Compatible with time delta. It is intended that supporting expression builders render `["Add", 2, 4, 3]` as _2+4+3_.
 ```python
 ["Add", 2, 4, 3]                  # 2+4+3=9
 ```
 
-### Negate
+#### Negate
 Inverts the sign.
 ```python
 ["Negate", 3]                     # -(3)=-3
@@ -106,20 +123,20 @@ Inverts the sign.
 ["Add", 5, 4, ["Negate", 3]]      # 5+4+(-3)=6
 ```
 
-### Subtract
+#### Subtract
 Performs basic subtraction.
 ```python
 ["Subtract", 10, 5, 2]            # 10-5-2=3
 ```
 
-### Multiply
+#### Multiply
 Performs basic multiplication.
 ```python
 ["Multiply", 2, 4]                # 2*4=8
 ["Multiply", 2, 3, 4]             # 2*3*4=24
 ```
 
-### Divide
+#### Divide
 Performs a division.
 ```python
 ["Divide", 10, 5]                 # 10/5=2.0
@@ -127,27 +144,29 @@ Performs a division.
 ["Divide", 1, 3]                  # 1/3=0.33333333333...
 ```
 
-### Square and Power
+#### Square and Power
 `Power` raises a number to given power. `Square` is a special case of `Power`.
 ```python
 ["Power", 2, 3]                   # 2^3=8
 ["Square", 4]                     # 4^2=16
 ```
 
-### Root and square root
+#### Root and square root
 ```python
 ["Root", 9, 2]                    # √9=3.0
 ["Root", 8, 3]                    # ∛8=2.0
 ["Sqrt", 9]                       # √9=3.0
 ```
 
-### Exponents and logarithms
+#### Exponents and logarithms
 ```python
 ["Exp", 2]                        # e^2≅7.389
 ["Log", 2.7183]                   # ln(2.7183)≅1.0000
 ["Log2", 8]                       # log2(8)=3.0
 ["Log10", 1000]                   # log10(1000)=3.0
 ```
+
+#### Conditionality
 
 ### Equality, greater than, less than
 ```python
@@ -175,6 +194,43 @@ Performs a division.
 ```
 
 
+### Aggregation
+
+#### Array
+
+_MathJSON Solver_ supports static arrays and arrays given as parameters. Arrays can contain any number of elements, including other arrays. Arrays can be used in `Max`, `Min`, `Average`, `Median`, `Length`, `Any`, `All`, `In`, `ContainsAnyOf`, `ContainsAllOf`, `ContainsNoneOf`, `NotIn`.
+
+A static array is defined as `["Array", 1, 2, 3]` and when evaluated, results to the same `["Array", 1, 2, 3]`.
+
+An array can be given as a parameter. In this case, the array is defined in the parameters dictionary and referred to by its name. For example, `parameters = {"a": ["Array", 1, 2, 3]}` and then the expression `["Max", "a"]` will result in 3.
+
+Here is a full example with Sum:
+```python
+from mathjson_solver import create_solver
+
+parameters = {"a": ["Array", 1, 1]}
+expression = ["Sum", "a"]
+
+solver = create_solver(parameters)
+answer = solver(expression)
+
+print(answer)
+# 2, because ∑(1, 1)=2
+```
+
+#### Average
+
+`Average` internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver. Such behavior makes `Average` the most forgiving of all _MathJSON Solver_ functions.
+
+```python
+["Average", ["Array", 1, 2, 3, 5, 2]]         # 2.6
+
+["Average", ["Array", 2, "three", 4 ,"6"]]    # Average of [2, 4, 6] == 4,  element "three" is ignored
+
+["Average", ["Array"]]                        # None
+```
+
+
 
 ### Other examples
 ```python
@@ -182,13 +238,10 @@ Performs a division.
 ["Round", -5.123456, 2]           # -5.12
 ["Round", -5.123456, 0]           # -5.0
 ["Round", -5.123456]              # -5
-["Array", 1, 2]                   # ["Array", 1, 2]
 
 ["Max", ["Array", 1, 2, 3, 5, 2]] # 5
 ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]]  # 9
 ["Median", ["Array", 1, 2, 3, 5, 2]]              # 2
-["Average", ["Array", 1, 2, 3, 5, 2]]             # 2.6
-["Average", ["Array"]]                            # None
 
 ["Length", ["Array", 1, 2, 3, 5, 2, 9]]           # 6
 ["Length", ["Array"]]                             # 0
