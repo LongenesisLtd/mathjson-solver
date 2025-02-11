@@ -1,6 +1,7 @@
 # MathJSON Solver
 
-![Coverage](https://img.shields.io/badge/coverage-86%-green)
+[![Test Coverage](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml)
+![Coverage](https://img.shields.io/badge/coverage-86-green)
 
 ![License](https://img.shields.io/github/license/LongenesisLtd/mathjson-solver.svg)
 
