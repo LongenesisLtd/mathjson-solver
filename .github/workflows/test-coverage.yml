@@ -29,7 +29,7 @@ jobs:
 
       - name: Extract Coverage Percentage
         run: |
-          COVERAGE=$(grep -oP '(?<=<coverage line-rate=")[0-9.]+(?=")' coverage.xml)
+          COVERAGE=$(awk -F 'line-rate="' '{print $2}' coverage.xml | cut -d '"' -f1)
           COVERAGE_PERCENT=$(awk -v cov="$COVERAGE" 'BEGIN {print int(cov * 100)}')
           echo "COVERAGE_PERCENT=$COVERAGE_PERCENT" >> "$GITHUB_ENV"
 
