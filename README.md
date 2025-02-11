@@ -1,12 +1,11 @@
 # MathJSON Solver
 
-[![Test Coverage](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml)
-![Coverage](https://img.shields.io/badge/coverage-86-green)
-
 ![License](https://img.shields.io/github/license/LongenesisLtd/mathjson-solver.svg)
+[![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 [![Python application](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml)
-[![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Test Coverage](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml/badge.svg)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml)
+![Coverage](https://img.shields.io/badge/coverage-86-green)
 
 
 
