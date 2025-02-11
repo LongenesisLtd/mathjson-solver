@@ -1,5 +1,5 @@
 # MathJSON Solver
-
+[![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/test-coverage.yml)
 [![Python application](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/LongenesisLtd/mathjson-solver/actions/workflows/python-app.yml)
 [![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
