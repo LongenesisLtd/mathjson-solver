@@ -30,7 +30,7 @@ jobs:
       - name: Extract Coverage Percentage
         run: |
           COVERAGE=$(grep -oP '(?<=<coverage line-rate=")[0-9.]+(?=")' coverage.xml)
-          COVERAGE_PERCENT=$(awk "BEGIN {print int($COVERAGE * 100)}")
+          COVERAGE_PERCENT=$(awk -v cov="$COVERAGE" 'BEGIN {print int(cov * 100)}')
           echo "COVERAGE_PERCENT=$COVERAGE_PERCENT" >> $GITHUB_ENV
 
       - name: Generate Coverage Badge
