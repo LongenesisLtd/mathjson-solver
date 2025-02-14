@@ -1,5 +1,4 @@
 import numbers
-from types import NoneType
 from typing import Union
 from functools import reduce
 import math
@@ -9,6 +8,7 @@ import logging
 import traceback
 import datetime
 
+NoneType = type(None)
 
 class MathJSONException(Exception):
     """Exception for MathJSON processing issues"""
