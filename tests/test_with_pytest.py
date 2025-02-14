@@ -37,6 +37,21 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Equal", 10, 12], False),
         ({}, ["Equal", "aaa", "aaa"], True),
         ({}, ["Equal", "aaa", "baa"], False),
+        ({}, ["Equal", "aaa", 11], False),
+        ({}, ["Equal", None, "1"], False),
+        ({}, ["Equal", 1, "1"], True),
+        ({}, ["Equal", None, False], True),
+
+        ({}, ["StrictEqual", 1, "1"], False),
+        ({}, ["StrictEqual", 10, 10], True),
+        ({}, ["StrictEqual", 10, 12], False),
+        ({}, ["StrictEqual", "aaa", "aaa"], True),
+        ({}, ["StrictEqual", "aaa", "baa"], False),
+        ({}, ["StrictEqual", "aaa", 11], False),
+        ({}, ["StrictEqual", None, "1"], False),
+        ({}, ["Equal", None, False], True),
+
+
         ({}, ["Greater", 1, 2], False),
         ({}, ["Greater", 2, -2], True),
         ({}, ["GreaterEqual", 1, 1], True),
@@ -121,6 +136,12 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
         ({}, ["If", [["Equal", 1, 0], 10], [["Equal", 2, 2], 20], 9000], 20),
+        # # The following tests that If don't fail on incompatible data types
+        # ({}, ["If", [["Equal", 1, "1"], 10], [["Equal", "1", "1"], 20], -1], 20),
+
+        # ({"a": 1}, ["If", [["Equal", "a", "1"], 10], [["Equal", "a", 1], 20], -1], 20),
+        # ({"a": 1}, ["If", [["Equal", "a", 1], 10], [["Equal", "a", "1"], 20], -1], 10),
+
         ({"a": 10, "b": 10}, ["If", [["Equal", "a", "b"], 10], 9000], 10),
         ({"a": 10, "b": 20}, ["If", [["Equal", "a", "b"], 10], 9000], 9000),
         ({"a": 10}, ["If", [["Equal", "a", "b"], 10], 9000], 9000),

@@ -20,6 +20,7 @@
 * [Log2](#exponents-and-logarithms)
 * [Log10](#exponents-and-logarithms)
 * [Equal](#equality-greater-than-less-than)
+* [StrictEqual](#equality-greater-than-less-than)
 * [NotEqual](#equality-greater-than-less-than)
 * [Greater](#equality-greater-than-less-than)
 * [GreaterEqual](#equality-greater-than-less-than)
@@ -146,7 +147,18 @@ Performs a division.
 ### Conditionality
 
 #### Equality, greater than, less than
+The _mathjson-solver_  provides two comparison operators that require additional explanation: `Equal` and `StrictEqual`, each designed to serve different use cases depending on the required level of strictness in comparisons.
+
+The `Equal` operator is intentionally forgiving, allowing for more flexible comparisons where certain values are treated as equivalent even if they are of different types. For example, `Equal` considers `1` and `"1"` (a string representation of the number) as the same, making it useful in scenarios where type differences are not critical. Additionally, `Equal` treats `False` and `None` as equivalent, which can be beneficial in cases where both represent the absence or falsity of a value.
+
+On the other hand, `StrictEqual` enforces a more precise comparison by considering both the value and type. Under `StrictEqual`, `1` and `"1"` are distinct because one is an integer and the other is a string. Likewise, False and None are treated as separate entities, ensuring that comparisons strictly adhere to data type consistency. This makes `StrictEqual` ideal for cases where exact type matching is necessary to maintain data integrity.
+
+Despite these differences, there are many cases where both `Equal` and `StrictEqual` behave the same way. For instance, they both consider `3.14` equal to `3.14` (as both are identical floating-point numbers) and `"hello"` equal to `"hello"` (since both are the same string). Additionally, for boolean values, both operators treat `True` as equal to `True` and `False` as equal to `False`. These similarities ensure that in most straightforward cases, both operators provide the expected result, while their differences become relevant in edge cases involving type flexibility.
+
 ```python
+["Equal", 1, "1"]                 # "1"=="1" = True
+["StrictEqual", 1, "1"]           # "1"== 1 = False
+
 ["Equal", 10, 10]                 # 10==10 = True
 ["Equal", 10, 12]                 # 10==12 = False
 ["Equal", "aaa", "aaa"]           # "aaa" == "aaa" ➞ True

@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/mathjson-solver.svg)](https://pypi.org/project/mathjson-solver/)
 [![PyPI Downloads](https://static.pepy.tech/badge/mathjson-solver/month)](https://pepy.tech/projects/mathjson-solver)
-![Coverage](https://img.shields.io/badge/coverage-86-green)
+![Coverage](https://img.shields.io/badge/coverage-93-green)
 
 _MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions, like `["Add", 1, 2]`. It is developed by [Longenesis](https://longenesis.com/team) to enable numerical evaluation of user provided mathematical expressions in Longenesis digital health products. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
 
@@ -24,7 +24,7 @@ print(answer)
 ```
 
 ## Currently supported constructs
-Find the full list of supported constructs in the [docs/README.md](docs/README.md).
+Find the full list of supported constructs in the [docs/README.md](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md).
 
 
 ## Exception handling
