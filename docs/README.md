@@ -7,7 +7,7 @@
 * [Negate](#negate)
 * [Subtract](#subtract)
 * `Constants` -
-* `Switch` -
+* [Switch](#switch-case-statement)
 * `If` -
 * [Multiply](#multiply)
 * [Divide](#divide)
@@ -336,4 +336,5 @@ Example
 ```python
 ["Switch", "color", 100, ["red", 10], ["blue", 20], ["green", 30]],
 ```
+
 The expression in this example will make solver to look for a constant (or a parameter) with the name "color". If "color" is "red", expression evaluates to 10, if "blue" - to 20, if "green" - to 30. Otherwise to 100. Please note that "color" here is a valid expression that evaluates to the actual value of "color" whether it is a parameter or constant.

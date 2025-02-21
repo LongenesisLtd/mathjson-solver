@@ -10,6 +10,7 @@ import datetime
 
 NoneType = type(None)
 
+
 class MathJSONException(Exception):
     """Exception for MathJSON processing issues"""
 
@@ -253,6 +254,20 @@ def create_mathjson_solver(solver_parameters):
                         raise ValueError(
                             "Case of 'Switch' should have exactly two parameters"
                         )
+                    if comparison_safe_converter(
+                        expression
+                    ) == comparison_safe_converter(f(x[0], c)):
+                        return f(x[1], c)
+                else:
+                    return f(s[2], c)
+
+            def StrictSwitch(s):
+                expression = f(s[1], c)
+                for x in s[3:]:
+                    if len(x) != 2:
+                        raise ValueError(
+                            "Case of 'StrictSwitch' should have exactly two parameters"
+                        )
                     if expression == f(x[0], c):
                         return f(x[1], c)
                 else:
@@ -431,6 +446,7 @@ def create_mathjson_solver(solver_parameters):
                 ),
                 "Constants": Constants,
                 "Switch": Switch,
+                "StrictSwitch": StrictSwitch,
                 "If": If,
                 "Multiply": lambda s: reduce(
                     lambda a, b: float(a) * float(b), [f(x, c) for x in s[1:]]

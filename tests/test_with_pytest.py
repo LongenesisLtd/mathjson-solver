@@ -132,6 +132,16 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         #     ],
         #     13
         # ),
+
+
+        # The next tests check the type-forgiving nature of Switch.
+        ({"value": 2}, ["Switch", "value", 0, ["1", 11], ["2", 22]], 22),
+        ({"value": "2"}, ["Switch", "value", 0, [1, 11], [2, 22]], 22),
+
+        # The next tests verify that the StrictSwitch is not forgiving.
+        ({"value": 2}, ["StrictSwitch", "value", 0, ["1", 11], ["2", 22]], 0),
+        ({"value": "2"}, ["StrictSwitch", "value", 0, [1, 11], [2, 22]], 0),
+
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
