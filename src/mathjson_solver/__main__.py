@@ -1,5 +1,5 @@
 import numbers
-from typing import Union
+from typing import Union, Any
 from functools import reduce
 import math
 from copy import deepcopy
@@ -45,6 +45,8 @@ def is_numeric(x):
     try:
         float(x)
     except ValueError:
+        return False
+    except TypeError:
         return False
     else:
         return True
@@ -141,6 +143,16 @@ def comparison_safe_converter(x):
     return x
 
 
+def comparison_safe_converter_for_pairs(
+    v1, v2
+) -> (Union[str, float], Union[str, float]):
+    if is_numeric(v1):
+        v1 = float(v1)
+    if is_numeric(v2):
+        v2 = float(v2)
+    return v1, v2
+
+
 def create_mathjson_solver(solver_parameters):
     def f(s, *args):
         if args:
@@ -160,10 +172,15 @@ def create_mathjson_solver(solver_parameters):
                 tmp = 0
                 for i, x in enumerate(s[1:]):
                     res = f(x, c)
+                    if is_numeric(res):
+                        res = float(res)
                     if i == 0:
                         tmp = res
                     else:
-                        tmp = tmp + res
+                        try:
+                            tmp = tmp + res
+                        except TypeError:
+                            pass
 
                     # if isinstance(res, list):
                     #     l_res.append(sum([xx for xx in res[1:]]))
@@ -180,15 +197,25 @@ def create_mathjson_solver(solver_parameters):
                 #         tmp = tmp + x
                 # return tmp
 
+            # def Sum(s):
+            #     l_res = []
+            #     for x in s[1:]:
+            #         res = f(x, c)
+            #         if isinstance(res, list):
+            #             l_res.append(sum([xx for xx in res[1:]]))
+            #         else:
+            #             l_res.append(res)
+            #     return sum(l_res)
+
             def Sum(s):
-                l_res = []
+                l_res = ["Array"]
                 for x in s[1:]:
                     res = f(x, c)
                     if isinstance(res, list):
-                        l_res.append(sum([xx for xx in res[1:]]))
+                        l_res.append(Add(["Array"] + [xx for xx in res[1:]]))
                     else:
                         l_res.append(res)
-                return sum(l_res)
+                return Add(l_res)
 
             def Max(s):
                 if isinstance(s[1], str):
@@ -222,7 +249,6 @@ def create_mathjson_solver(solver_parameters):
 
             def Length(s):
                 if isinstance(s[1], str):
-
                     return len([x for x in f(s[1], c)][1:])
                 else:
                     return len([x for x in s[1][1:]])
@@ -361,9 +387,43 @@ def create_mathjson_solver(solver_parameters):
                 if isinstance(z, list):
                     retlist = ["Array"]
                     for x in z[1:]:
+                        try:
+                            the_function_name = s[2][0]
+                            ss = [the_function_name, x] + s[3:]
+                            retlist.append(f(ss, c))
+                        except MathJSONException:
+                            retlist.append(x)
+                    return retlist
+
+            def StrictMap(s):
+                """
+                ["Map", list, function, more parameters]
+                The `function` must accept at least one parameter. That is for the current loop element.
+                The `more parameters` are for any additional parameters that function might have.
+                """
+                z = f(s[1], c)
+                if isinstance(z, list):
+                    retlist = ["Array"]
+                    for x in z[1:]:
                         the_function_name = s[2][0]
                         ss = [the_function_name, x] + s[3:]
                         retlist.append(f(ss, c))
+                    return retlist
+
+            def Filter(s):
+                """
+                ["Filter", list, function, more parameters]
+                The `function` must accept at least one parameter. That is for the current loop element.
+                The `more parameters` are for any additional parameters that function might have.
+                """
+                z = f(s[1], c)
+                if isinstance(z, list):
+                    retlist = ["Array"]
+                    for x in z[1:]:
+                        the_function_name = s[2][0]
+                        ss = [the_function_name, x] + s[3:]
+                        if f(ss, c):
+                            retlist.append(x)
                     return retlist
 
             def HasMatchingSublist(s):
@@ -438,6 +498,34 @@ def create_mathjson_solver(solver_parameters):
                 # Todo: This does not work
                 return s[1] in c.keys()
 
+            def Greater(s):
+                v1, v2 = comparison_safe_converter_for_pairs(f(s[1], c), f(s[2], c))
+                try:
+                    return v1 > v2
+                except TypeError:
+                    return False
+
+            def GreaterEqual(s):
+                v1, v2 = comparison_safe_converter_for_pairs(f(s[1], c), f(s[2], c))
+                try:
+                    return v1 >= v2
+                except TypeError:
+                    return False
+
+            def Less(s):
+                v1, v2 = comparison_safe_converter_for_pairs(f(s[1], c), f(s[2], c))
+                try:
+                    return v1 < v2
+                except TypeError:
+                    return False
+
+            def LessEqual(s):
+                v1, v2 = comparison_safe_converter_for_pairs(f(s[1], c), f(s[2], c))
+                try:
+                    return v1 <= v2
+                except TypeError:
+                    return False
+
             constructs = {
                 "Sum": Sum,
                 "Add": Add,
@@ -465,11 +553,17 @@ def create_mathjson_solver(solver_parameters):
                 "Equal": lambda s: comparison_safe_converter(f(s[1], c))
                 == comparison_safe_converter(f(s[2], c)),
                 "StrictEqual": lambda s: f(s[1], c) == f(s[2], c),
-                "Greater": lambda s: f(s[1], c) > f(s[2], c),
-                "GreaterEqual": lambda s: f(s[1], c) >= f(s[2], c),
-                "Less": lambda s: f(s[1], c) < f(s[2], c),
-                "LessEqual": lambda s: f(s[1], c) <= f(s[2], c),
-                "NotEqual": lambda s: f(s[1], c) != f(s[2], c),
+                # "Greater": lambda s: f(s[1], c) > f(s[2], c),
+                "Greater": Greater,
+                # "GreaterEqual": lambda s: f(s[1], c) >= f(s[2], c),
+                "GreaterEqual": GreaterEqual,
+                # "Less": lambda s: f(s[1], c) < f(s[2], c),
+                "Less": Less,
+                # "LessEqual": lambda s: f(s[1], c) <= f(s[2], c),
+                "LessEqual": LessEqual,
+                # "NotEqual": lambda s: f(s[1], c) != f(s[2], c),
+                "NotEqual": lambda s: comparison_safe_converter(f(s[1], c))
+                != comparison_safe_converter(f(s[2], c)),
                 "Abs": lambda s: abs(f(s[1], c)),
                 "Round": lambda s: (
                     round(f(s[1], c), f(s[2], c))
@@ -500,6 +594,8 @@ def create_mathjson_solver(solver_parameters):
                 # "IsDefined": lambda s: s[1] in c,
                 "IsDefined": IsDefined,
                 "Map": Map,
+                "StrictMap": StrictMap,
+                "Filter": Filter,
                 "HasMatchingSublist": HasMatchingSublist,
                 "Strptime": Strptime,
                 "Strftime": Strftime,

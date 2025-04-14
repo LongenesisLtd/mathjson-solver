@@ -13,6 +13,10 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
     [
         ({}, ["Add", 2, 4, 3], 9),
         ({}, ["Sum", 2, 4, 3], 9),
+        ({}, ["Sum", 2, 4, 3, None], 9),
+        ({}, ["Add", 2, 4, "3"], 9),
+        ({}, ["Sum", 2, 4, "3"], 9),
+        ({}, ["Sum", 2, 4, "3", "abc"], 9),
         ({}, ["Sum", ["Array", 1, 1], 4, 3], 9),
         ({}, ["Sum", ["Array", 2, 4, 3]], 9),
         ({"a": 2}, ["Sum", "a", 4, 3], 9),
@@ -33,6 +37,16 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Round", ["Log", 2.7183], 3], 1.0),
         ({}, ["Log2", 8], 3),
         ({}, ["Log10", 1000], 3),
+    ],
+)
+def test_solver_arithmetics(parameters, expression, expected_result):
+    solver = create_solver(parameters)
+    assert solver(expression) == expected_result
+
+
+@pytest.mark.parametrize(
+    "parameters, expression, expected_result",
+    [
         ({}, ["Equal", 10, 10], True),
         ({}, ["Equal", 10, 12], False),
         ({}, ["Equal", "aaa", "aaa"], True),
@@ -41,7 +55,6 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Equal", None, "1"], False),
         ({}, ["Equal", 1, "1"], True),
         ({}, ["Equal", None, False], True),
-
         ({}, ["StrictEqual", 1, "1"], False),
         ({}, ["StrictEqual", 10, 10], True),
         ({}, ["StrictEqual", 10, 12], False),
@@ -50,12 +63,12 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["StrictEqual", "aaa", 11], False),
         ({}, ["StrictEqual", None, "1"], False),
         ({}, ["Equal", None, False], True),
-
-
         ({}, ["Greater", 1, 2], False),
         ({}, ["Greater", 2, -2], True),
+        ({}, ["Greater", "2", -2], True),
         ({}, ["GreaterEqual", 1, 1], True),
         ({}, ["GreaterEqual", 2, 1], True),
+        ({}, ["GreaterEqual", 2, "1"], True),
         ({}, ["GreaterEqual", 0, 0], True),
         ({}, ["GreaterEqual", 1, 2], False),
         ({}, ["Less", 1, 1], False),
@@ -67,6 +80,16 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["NotEqual", 1, 2], True),
         ({}, ["NotEqual", "aaa", "bbb"], True),
         ({}, ["NotEqual", "aaa", 0], True),
+    ],
+)
+def test_solver_comparison(parameters, expression, expected_result):
+    solver = create_solver(parameters)
+    assert solver(expression) == expected_result
+
+
+@pytest.mark.parametrize(
+    "parameters, expression, expected_result",
+    [
         # ({"a": 12}, ["IsDefined", "a"], True),
         ({"a": 12}, ["IsDefined", "b"], False),
         ({}, ["Abs", -3.5], 3.5),
@@ -132,26 +155,20 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         #     ],
         #     13
         # ),
-
-
         # The next tests check the type-forgiving nature of Switch.
         ({"value": 2}, ["Switch", "value", 0, ["1", 11], ["2", 22]], 22),
         ({"value": "2"}, ["Switch", "value", 0, [1, 11], [2, 22]], 22),
-
         # The next tests verify that the StrictSwitch is not forgiving.
         ({"value": 2}, ["StrictSwitch", "value", 0, ["1", 11], ["2", 22]], 0),
         ({"value": "2"}, ["StrictSwitch", "value", 0, [1, 11], [2, 22]], 0),
-
         ({"color": "red"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 30),
         ({"color": "green"}, ["Switch", "color", 0, ["blue", 10], ["red", 30]], 0),
         ({"color": "green"}, ["Switch", "undefined", 0, ["blue", 10], ["red", 30]], 0),
         ({}, ["If", [["Equal", 1, 0], 10], [["Equal", 2, 2], 20], 9000], 20),
         # # The following tests that If don't fail on incompatible data types
         # ({}, ["If", [["Equal", 1, "1"], 10], [["Equal", "1", "1"], 20], -1], 20),
-
         # ({"a": 1}, ["If", [["Equal", "a", "1"], 10], [["Equal", "a", 1], 20], -1], 20),
         # ({"a": 1}, ["If", [["Equal", "a", 1], 10], [["Equal", "a", "1"], 20], -1], 10),
-
         ({"a": 10, "b": 10}, ["If", [["Equal", "a", "b"], 10], 9000], 10),
         ({"a": 10, "b": 20}, ["If", [["Equal", "a", "b"], 10], 9000], 9000),
         ({"a": 10}, ["If", [["Equal", "a", "b"], 10], 9000], 9000),
@@ -196,6 +213,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({"a": ["Array", 2, 8]}, ["Average", "a"], 5),
         ({"a": 10, "b": 20}, ["Average", ["Array", "a", "b"]], 15),
         ({}, ["Length", ["Array", 1, 2, 3, 5, 2, 9]], 6),
+        ({}, ["Length", ["Array", 1, 2, 3, None]], 4),
         ({"a": ["Array", 1, 2, 3, 5, 2, 9]}, ["Length", "a"], 6),
         ({}, ["Length", ["Array"]], 0),
         # Next test illustrates an invalid formula, where 'Length' receives an invalid array.
@@ -281,7 +299,15 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
         ({}, ["Not", 0], True),
         ({}, ["Not", ["In", 2, ["Array", 1, 2, 3]]], False),
         ({}, ["Array", 2, 4, 3], ["Array", 2, 4, 3]),
+        ({}, ["StrictMap", ["Array", 1, 2, 3], ["Square"]], ["Array", 1, 4, 9]),
+        ({}, ["Filter", ["Array", 1, 2, 3], ["LessEqual"], 2], ["Array", 1, 2]),
+        ({}, ["Filter", ["Array", 1, 2, 3, "None"], ["LessEqual"], 2], ["Array", 1, 2]),
         ({}, ["Map", ["Array", 1, 2, 3], ["Square"]], ["Array", 1, 4, 9]),
+        (
+            {},
+            ["Map", ["Array", 1, 2, 3, None, "a"], ["Square"]],
+            ["Array", 1, 4, 9, None, "a"],
+        ),
         ({}, ["Map", ["Array", 1, 2, 3], ["Power"], 2], ["Array", 1, 4, 9]),
         (
             {},

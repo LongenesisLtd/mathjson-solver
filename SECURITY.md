@@ -11,4 +11,4 @@
 
 ## Reporting a Vulnerability
 
-To report a vulnerability, please onen an issue. The issue wil be reviewed within two working days, however if the fix is simple, a patch is usualy provided in few hours.
+To report a vulnerability, please open an issue. The issue will be reviewed within two working days, however if the fix is simple, a patch is usually provided in few hours.

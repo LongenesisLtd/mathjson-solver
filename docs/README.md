@@ -2,8 +2,8 @@
 
 <div style="float: left; width: 33%;">
 
-* [Sum](#sum)
 * [Add](#add)
+* [Sum](#sum)
 * [Negate](#negate)
 * [Subtract](#subtract)
 * `Constants` -
@@ -81,17 +81,33 @@
 
 #### Basic math
 
+#### Add
+`Add` iteratively adds up the given values. Compatible with time delta. It is intended that supporting expression builders render `["Add", 2, 4, 3]` as _2+4+3_.
+```python
+["Add", 2, 4, 3]                  # 2+4+3=9
+```
+`Add` is intentionally forgiving as it tries to convert strings to numbers, making addition of strings like `["Add", "2", "4", "3"]` actually possible. Also, it ignores un-convertible elements so arrays like `["Add", "2", "three", "4", "6"]` don't crash the solver.
+
+`Add` does not work with nested arrays.
+
+
+```python
+["Add", 2, 4, 3]                  # 2+4+3=9
+["Add", 2, 4, "3"]                # 2+4+3=9
+["Add", 2, 4, "3", None]          # 2+4+3=9
+["Add", 2, 4, "3", None, "abc"]   # 2+4+3=9
+
+```
+
+
+
 #### Sum
-Adds up the given values. `Sum` internally uses Python's `sum` function. Not compatible with time delta. It is intended that supporting expression builders render `["Sum", 2, 4, 3]` as _∑(2, 4, 3)_.
+Adds up the given values. `Sum` internally uses `Add` function. Compatible with nested arrays. It is intended that supporting expression builders render `["Sum", 2, 4, 3]` as _∑(2, 4, 3)_.
 ```python
 ["Sum", 2, 4, 3]                  # ∑(2, 4, 3)=9
 ```
 
-#### Add
-Almost the same as `Sum`, but instead of using Python's `sum()`, `Add` iteratively adds up the given values. Compatible with time delta. It is intended that supporting expression builders render `["Add", 2, 4, 3]` as _2+4+3_.
-```python
-["Add", 2, 4, 3]                  # 2+4+3=9
-```
+
 
 #### Negate
 Inverts the sign.
@@ -209,7 +225,7 @@ print(answer)
 
 #### Average
 
-`Average` internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver. Such behavior makes `Average` the most forgiving of all _MathJSON Solver_ functions.
+`Average` internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver.
 
 ```python
 ["Average", ["Array", 1, 2, 3, 5, 2]]         # 2.6
