@@ -490,7 +490,7 @@ def test_solver_simple(parameters, expression, expected_result):
 @pytest.mark.parametrize(
     "parameters, expression, expected_result",
     [
-        # Polynomial Function f(x) = x²
+        # 1. Polynomial Function f(x) = x²
         (
             {},
             [
@@ -503,7 +503,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(0.3350000000000001),
         ),
-        # Trigonometric Function f(x) = sin(x)
+        # 2. Trigonometric Function f(x) = sin(x)
         (
             {},
             [
@@ -516,7 +516,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(1.9998355038874436),
         ),
-        # Exponential Function f(x) = e^x
+        # 3. Exponential Function f(x) = e^x
         (
             {},
             [
@@ -529,7 +529,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(1.7182961474504177),
         ),
-        # Rational Function f(x) = 1/(1+x²)
+        # 4. Rational Function f(x) = 1/(1+x²)
         (
             {},
             [
@@ -542,7 +542,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(0.7853939967307823),
         ),
-        # Product of Functions f(x) = x·sin(x)
+        # 5. Product of Functions f(x) = x·sin(x)
         (
             {},
             [
@@ -555,7 +555,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(3.1413342637004176),
         ),
-        # Logarithmic Function f(x) = ln(x)
+        # 6. Logarithmic Function f(x) = ln(x)
         (
             {},
             [
@@ -568,7 +568,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(0.38629019447752866),
         ),
-        # Function with Singularity f(x) = 1/√x
+        # 7. Function with Singularity f(x) = 1/√x
         (
             {},
             [
@@ -581,7 +581,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(1.8038847804497282),
         ),
-        # Highly Oscillatory Function f(x) = sin(10x)·cos(3x)
+        # 8. Highly Oscillatory Function f(x) = sin(10x)·cos(3x)
         (
             {},
             [
@@ -598,7 +598,7 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(5.787724498767512e-16),  # effectively zero
         ),
-        # Function with Multiple Local Extrema x²·sin(1/x)
+        # 9. Function with Multiple Local Extrema x²·sin(1/x)
         (
             {},
             [
@@ -614,6 +614,52 @@ def test_solver_simple(parameters, expression, expected_result):
                 ["Variable", "x"],
             ],
             np.float64(0.2866184933855661),
+        ),
+        # 10. Rapidly Varying Function f(x) = e^(-x²)
+        (
+            {},
+            [
+                "TrapezoidalIntegrate",
+                [
+                    "Exp",
+                    ["Multiply", -1, ["Power", ["Variable", "x"], 2]],
+                ],
+                -5,
+                5,
+                500,
+                ["Variable", "x"],
+            ],
+            np.float64(1.7724538509027818),
+        ),
+        # 11. Function with Discontinuity f(x) = 1/x
+        (
+            {},
+            [
+                "TrapezoidalIntegrate",
+                ["Divide", 1, ["Variable", "x"]],
+                0.001,
+                1,
+                1000,
+                ["Variable", "x"],
+            ],
+            np.float64(6.984825983783107),  # 6.90776 is more accurate
+        ),
+        # 12. Function with Sharp Peak f(x) = 1/(1+100x²)
+        (
+            {},
+            [
+                "TrapezoidalIntegrate",
+                [
+                    "Divide",
+                    1,
+                    ["Add", 1, ["Multiply", 100, ["Power", ["Variable", "x"], 2]]],
+                ],
+                -1,
+                1,
+                1000,
+                ["Variable", "x"],
+            ],
+            np.float64(0.29422552179014305),
         ),
     ],
 )

@@ -597,15 +597,13 @@ def create_mathjson_solver(solver_parameters):
                 # Calculate the integral using the trapezoidal rule
 
                 values = []
-                # c0 = c
                 for x in t:
                     variable_name = variable[1]
                     variable_value = x
                     c[variable_name] = variable_value
                     values.append(f(function_expression, c))
                 h = (end - start) / n
-                # values = f(t, x, y)
-                print("values=", values)
+                # print("values=", values)
                 return h * (0.5 * values[0] + np.sum(values[1:-1]) + 0.5 * values[-1])
 
                 # return total_area
@@ -693,7 +691,7 @@ def create_mathjson_solver(solver_parameters):
                 "Function": Function,
                 "Variable": Variable,
                 "TrapezoidalIntegrate": TrapezoidalIntegrate,
-                "Sin":Sin,
+                "Sin": Sin,
                 "Cos": Cos,
                 "Tan": Tan,
                 "Arcsin": Arcsin,
