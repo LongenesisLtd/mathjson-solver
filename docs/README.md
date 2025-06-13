@@ -57,6 +57,7 @@
 * `Not` -
 * `IsDefined` - Checks if a value is in parameters.
 
+
 </div>
 
 
@@ -72,6 +73,22 @@
 * `TimeDeltaHours` -
 * `TimeDeltaMinutes` -
 * `TimeDeltaDays` -
+
+* `Function` - Placeholder for future use.
+* `Variable` - Reference a variable in an integrable expression. For use with `TrapezoidalIntegrate`.
+* `TrapezoidalIntegrate` - Compute a numerical integral using the trapezoidal rule. Please see what functions are supported in the [Integration test cases](integration-test-cases.md) section.
+
+
+Trigonometric functions
+
+* `Sin` -
+* `Cos` -
+* `Tan` -
+* `Arcsin` -
+* `Arccos` -
+* `Arctan` -
+
+* `Pi` - Use as ["Pi"], evaluates to Python's `math.pi`.
 
 </div>
 

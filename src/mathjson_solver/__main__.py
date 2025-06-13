@@ -8,6 +8,14 @@ import logging
 import traceback
 import datetime
 
+NUMPY_AVAILABLE = False
+try:
+    import numpy as np
+
+    NUMPY_AVAILABLE = True
+except ImportError:
+    pass
+
 NoneType = type(None)
 
 
@@ -526,6 +534,80 @@ def create_mathjson_solver(solver_parameters):
                 except TypeError:
                     return False
 
+            # sin, cos, tan, arcsin, arccos, arctan
+            def Sin(s):
+                return math.sin(f(s[1], c))
+
+            def Arcsin(s):
+                return math.asin(f(s[1], c))
+
+            def Cos(s):
+                return math.cos(f(s[1], c))
+
+            def Arccos(s):
+                return math.acos(f(s[1], c))
+
+            def Tan(s):
+                return math.tan(f(s[1], c))
+
+            def Arctan(s):
+                return math.atan(f(s[1], c))
+
+            def Pi(s):
+                return math.pi
+
+            def Variable(s):
+                """
+                ["Variable", variable_name]
+                The `variable_name` must be a string.
+                """
+                variable_name = s[1]
+                if variable_name in c:
+                    return f(c[variable_name], c)
+                else:
+                    raise KeyError(f"Variable '{variable_name}' is not defined")
+
+            def Function(s):
+                """
+                ["Function", function_expression, parameters]
+                The `function_name` must be a callable function.
+                The `parameters` are the arguments to be passed to the function.
+                """
+                function_expression = s[1]
+                arguments = s[2:]
+                return 0
+                # return f(function_expression, c) function_name(*parameters)
+
+            def TrapezoidalIntegrate(s):
+                """
+                ["TrapezoidalIntegrate", function_expression, start, end, n, variable]
+                """
+                if not NUMPY_AVAILABLE:
+                    raise ImportError(
+                        "TrapezoidalIntegrate requires 'numpy'. Install with 'pip install numpy'."
+                    )
+                function_expression = s[1]
+                start = f(s[2], c)
+                end = f(s[3], c)
+                n = f(s[4], c)
+                variable = s[5]
+
+                t = np.linspace(start, end, n + 1)
+
+                # Calculate the integral using the trapezoidal rule
+
+                values = []
+                for x in t:
+                    variable_name = variable[1]
+                    variable_value = x
+                    c[variable_name] = variable_value
+                    values.append(f(function_expression, c))
+                h = (end - start) / n
+                # print("values=", values)
+                return h * (0.5 * values[0] + np.sum(values[1:-1]) + 0.5 * values[-1])
+
+                # return total_area
+
             constructs = {
                 "Sum": Sum,
                 "Add": Add,
@@ -549,6 +631,7 @@ def create_mathjson_solver(solver_parameters):
                 "Log": lambda s: math.log(f(s[1], c)),
                 "Log2": lambda s: math.log2(f(s[1], c)),
                 "Log10": lambda s: math.log10(f(s[1], c)),
+                "Ln": lambda s: math.log(f(s[1], c)),
                 # "Equal": lambda s: f"{f(s[1], c)}" == f"{f(s[2], c)}",
                 "Equal": lambda s: comparison_safe_converter(f(s[1], c))
                 == comparison_safe_converter(f(s[2], c)),
@@ -605,6 +688,16 @@ def create_mathjson_solver(solver_parameters):
                 "TimeDeltaHours": TimeDeltaHours,
                 "TimeDeltaMinutes": TimeDeltaMinutes,
                 "TimeDeltaDays": TimeDeltaDays,
+                "Function": Function,
+                "Variable": Variable,
+                "TrapezoidalIntegrate": TrapezoidalIntegrate,
+                "Sin": Sin,
+                "Cos": Cos,
+                "Tan": Tan,
+                "Arcsin": Arcsin,
+                "Arccos": Arccos,
+                "Arctan": Arctan,
+                "Pi": Pi,
             }
             if s[0] in constructs:
                 try:
@@ -659,6 +752,7 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Log",
         "Log2",
         "Log10",
+        "Ln",
         "Equal",
         "Greater",
         "GreaterEqual",
@@ -699,6 +793,16 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "TimeDeltaHours",
         "TimeDeltaMinutes",
         "TimeDeltaDays",
+        "Function",
+        "Variable",
+        "TrapezoidalIntegrate",
+        "Sin",
+        "Cos",
+        "Tan",
+        "Arcsin",
+        "Arccos",
+        "Arctan",
+        "Pi",
     ]
     if isinstance(s, str):
         if s in ignore_list:
