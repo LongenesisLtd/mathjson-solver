@@ -9,7 +9,7 @@ try:
 
     NUMPY_AVAILABLE = True
 except ImportError:
-    pass
+    np = None
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src/"))
 
@@ -486,10 +486,12 @@ def test_solver_simple(parameters, expression, expected_result):
     assert solver(expression) == expected_result
 
 
-@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="NumPy not available")
-@pytest.mark.parametrize(
-    "parameters, expression, expected_result",
-    [
+def _create_numpy_test_cases():
+    """Create test cases that require numpy, only if numpy is available."""
+    if not NUMPY_AVAILABLE:
+        return []
+
+    return [
         # 1. Polynomial Function f(x) = x²
         (
             {},
@@ -661,7 +663,12 @@ def test_solver_simple(parameters, expression, expected_result):
             ],
             np.float64(0.29422552179014305),
         ),
-    ],
+    ]
+
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="NumPy not available")
+@pytest.mark.parametrize(
+    "parameters, expression, expected_result", _create_numpy_test_cases()
 )
 def test_integrals(parameters, expression, expected_result):
     solver = create_solver(parameters)
