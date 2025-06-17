@@ -123,14 +123,14 @@ pytest --cov=mathjson_solver
 
 - **Questions & Discussion:** [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
 - **Bug Reports & Feature Requests:** [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
-- **Documentation:** [Full API Reference](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
+- **Documentation:** [Complete Function Reference](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
 
 ## Contributing
 
 We welcome contributions! Please feel free to:
 - Report bugs or request features via [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
 - Submit pull requests with improvements
-- Join discussions in our [Gitter community](https://gitter.im/mathjson-solver/community)
+
 
 ## License
 
