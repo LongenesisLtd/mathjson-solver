@@ -8,7 +8,7 @@ A reliable Python library for numerically evaluating mathematical expressions in
 
 **What is MathJSON?** MathJSON represents mathematical expressions as JSON arrays, like `["Add", 1, 2, 3]` for 1+2+3. This format is safe, structured, and easy to generate programmatically.
 
-Developed by [Longenesis](https://longenesis.com/team) for use in digital health products. Inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/).
+Inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/) though designed as an independent implementation focused on our specific use cases.
 
 ## Table of Contents
 - [Installation](#installation)
@@ -98,11 +98,11 @@ except MathJSONException as e:
 
 ## Use Cases
 
-**Dynamic Formulas:** Let users create custom calculations in web applications
-**Scientific Computing:** Evaluate mathematical models with variable parameters
-**Business Logic:** Process complex pricing rules or scoring algorithms
-**Data Processing:** Apply mathematical transformations to datasets
-**Health Applications:** Calculate medical scores, dosages, or risk assessments
+* **Dynamic Formulas:** Let users create custom calculations in web applications
+* **Scientific Computing:** Evaluate mathematical models with variable parameters
+* **Business Logic:** Process complex pricing rules or scoring algorithms
+* **Data Processing:** Apply mathematical transformations to datasets
+* **Health Applications:** Calculate medical scores, dosages, or risk assessments
 
 ## Testing
 
