@@ -27,6 +27,7 @@ pip install mathjson-solver
 ```
 
 **Requirements:** Python 3.7+
+
 **Optional:** numpy (only required for `TrapezoidalIntegrate` function)
 
 ## Quick Start
