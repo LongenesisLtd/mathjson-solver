@@ -2,50 +2,139 @@
 
 [![PyPI](https://img.shields.io/pypi/v/mathjson-solver.svg)](https://pypi.org/project/mathjson-solver/)
 [![PyPI Downloads](https://static.pepy.tech/badge/mathjson-solver/month)](https://pepy.tech/projects/mathjson-solver)
-![Coverage](https://img.shields.io/badge/coverage-91-green)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-_MathJSON Solver_ is a Python module to numerically evaluate MathJSON expressions, like `["Add", 1, 2]`. It is developed by [Longenesis](https://longenesis.com/team) to enable numerical evaluation of user provided mathematical expressions in Longenesis digital health products. Its development was inspired by [CortexJS](https://cortexjs.io/compute-engine/) Compute Engine.
+A reliable Python library for numerically evaluating mathematical expressions in MathJSON format. Perfect for applications that need to safely execute user-provided formulas, calculate dynamic equations, or process mathematical data.
 
-Please ask questions and share feedback in our Gitter chat [https://gitter.im/mathjson-solver/community](https://gitter.im/mathjson-solver/community).
-[![Gitter](https://badges.gitter.im/mathjson-solver/community.svg)](https://gitter.im/mathjson-solver/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+**What is MathJSON?** MathJSON represents mathematical expressions as JSON arrays, like `["Add", 1, 2, 3]` for 1+2+3. This format is safe, structured, and easy to generate programmatically.
 
-## How to use
-```python
-from mathjson_solver import create_solver
+Developed by [Longenesis](https://longenesis.com/team) for use in digital health products. Inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/).
 
-parameters = {"x": 2, "y": 3}
-expression = ["Add", "x", "y", 4]
+## Table of Contents
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Supported Operations](#supported-operations)
+- [Error Handling](#error-handling)
+- [Use Cases](#use-cases)
+- [Testing](#testing)
+- [Community](#community)
+- [Contributing](#contributing)
 
-solver = create_solver(parameters)
-answer = solver(expression)
+## Installation
 
-print(answer)
-# 9, because 2+3+4=9
+```bash
+pip install mathjson-solver
 ```
 
-## Currently supported constructs
-Find the full list of supported constructs in the [docs/README.md](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md).
+**Requirements:** Python 3.7+
+**Optional:** numpy (only required for `TrapezoidalIntegrate` function)
 
+## Quick Start
 
-## Exception handling
+```python
+from mathjson_solver import create_solver, MathJSONException
 
-A `MathJSONException` is raised when expression cannot be evaluated. Import `MathJSONException` to handle it:
+# Define variables and create solver
+parameters = {"x": 2, "y": 3}
+solver = create_solver(parameters)
+
+# Evaluate expressions
+basic_math = solver(["Add", "x", "y", 4])
+print(basic_math)  # 9 (because 2+3+4=9)
+
+# More complex expressions
+result = solver(["Multiply", ["Add", "x", 1], ["Subtract", "y", 1]])
+print(result)  # 6 (because (2+1) * (3-1) = 6)
+
+# Handle errors gracefully
+try:
+    solver(["Divide", 1, 0])
+except MathJSONException as e:
+    print(f"Math error: {e}")
+    # Math error: Problem in Divide. ['Divide', 1, 0]. division by zero
+```
+
+## Supported Operations
+
+The library supports a comprehensive set of mathematical operations:
+
+**Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round
+**Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan
+**Logarithms:** Log, Log2, Log10, Exp
+**Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
+**Logic & Sets:** Any, All, Not, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
+**Statistics:** Average, Max, Min, Median, Length
+**Arrays:** Array creation and manipulation with Map function
+**Control Flow:** If statements, Switch-Case, Constants definition
+**Type Conversion:** Int, Float, Str, IsDefined
+**Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions
+**Advanced:** HasMatchingSublist, TrapezoidalIntegrate (requires numpy), Variable references
+**Constants:** Pi
+
+[View complete documentation with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
+
+## Error Handling
+
+MathJSON Solver raises `MathJSONException` for invalid expressions or mathematical errors:
+
 ```python
 from mathjson_solver import create_solver, MathJSONException
 
 solver = create_solver({})
+
+# Handle specific math errors
 try:
-    solver(["Divide", 1, 0])
-except MathJSONException:
-    pass
-    # invoke your own exception logger here
+    result = solver(["Sqrt", -1])  # Invalid: square root of negative
+except MathJSONException as e:
+    print(f"Cannot evaluate: {e}")
+
+# Handle malformed expressions
+try:
+    result = solver(["UnknownFunction", 1, 2])
+except MathJSONException as e:
+    print(f"Unsupported operation: {e}")
 ```
 
-Left unhandled, the exception will look like `MathJSONException("Problem in Divide. ['Divide', 1, 0]. division by zero")`.
+## Use Cases
 
+**Dynamic Formulas:** Let users create custom calculations in web applications
+**Scientific Computing:** Evaluate mathematical models with variable parameters
+**Business Logic:** Process complex pricing rules or scoring algorithms
+**Data Processing:** Apply mathematical transformations to datasets
+**Health Applications:** Calculate medical scores, dosages, or risk assessments
 
-## How to run tests
-Make sure you have `pytest` installed. Then `cd` into project directory and run:
+## Testing
+
+Install development dependencies and run tests:
+
 ```bash
+# Install pytest if not already installed
+pip install pytest
+
+# Run tests from project directory
 pytest
+
+# Run with coverage
+pytest --cov=mathjson_solver
 ```
+
+## Community
+
+- **Questions & Discussion:** [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
+- **Bug Reports & Feature Requests:** [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
+- **Documentation:** [Full API Reference](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
+
+## Contributing
+
+We welcome contributions! Please feel free to:
+- Report bugs or request features via [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
+- Submit pull requests with improvements
+- Join discussions in our [Gitter community](https://gitter.im/mathjson-solver/community)
+
+## License
+
+[View license information](https://github.com/LongenesisLtd/mathjson-solver/blob/main/LICENSE)
+
+---
+
+Made with ❤️ by [Longenesis](https://longenesis.com/team)
