@@ -58,18 +58,18 @@ except MathJSONException as e:
 
 The library supports a comprehensive set of mathematical operations:
 
-**Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round
-**Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan
-**Logarithms:** Log, Log2, Log10, Exp
-**Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
-**Logic & Sets:** Any, All, Not, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
-**Statistics:** Average, Max, Min, Median, Length
-**Arrays:** Array creation and manipulation with Map function
-**Control Flow:** If statements, Switch-Case, Constants definition
-**Type Conversion:** Int, Float, Str, IsDefined
-**Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions
-**Advanced:** HasMatchingSublist, TrapezoidalIntegrate (requires numpy), Variable references
-**Constants:** Pi
+* **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round
+* **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan
+* **Logarithms:** Log, Log2, Log10, Exp
+* **Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
+* **Logic & Sets:** Any, All, Not, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
+* **Statistics:** Average, Max, Min, Median, Length
+* **Arrays:** Array creation and manipulation with Map function
+* **Control Flow:** If statements, Switch-Case, Constants definition
+* **Type Conversion:** Int, Float, Str, IsDefined
+* **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions
+* **Advanced:** HasMatchingSublist, TrapezoidalIntegrate (requires numpy), Variable references
+* **Constants:** Pi
 
 [View complete documentation with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
 
