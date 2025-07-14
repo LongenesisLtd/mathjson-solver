@@ -699,6 +699,9 @@ def create_mathjson_solver(solver_parameters):
                 "Arctan": Arctan,
                 "Pi": Pi,
             }
+            if not s:
+                # Empty equation given - []
+                return None
             if s[0] in constructs:
                 try:
                     return constructs[s[0]](s)

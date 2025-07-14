@@ -19,6 +19,7 @@ from mathjson_solver import create_solver, MathJSONException, extract_variables
 @pytest.mark.parametrize(
     "parameters, expression, expected_result",
     [
+        ({}, [], None),
         ({}, ["Add", 2, 4, 3], 9),
         ({}, ["Sum", 2, 4, 3], 9),
         ({}, ["Sum", 2, 4, 3, None], 9),
