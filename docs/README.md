@@ -36,6 +36,20 @@
 ["Add", 2, 4, "3", None, "abc"]   # 2+4+3=9
 ```
 
+### AddScalar
+Adds a scalar value to each element of an array.
+
+```python
+["AddScalar", ["Array", 2, 3, 4], 1]                 # ["Array", 3, 4, 5]
+```
+
+### AddArray
+Performs element-wise addition between two arrays of equal length.
+
+```python
+["AddArray", ["Array", 2, 3, 4], ["Array", 1, 2, 3]]  # ["Array", 3, 5, 7]
+```
+
 ### Sum
 Adds up the given values. `Sum` internally uses `Add` function. Compatible with nested arrays. It is intended that supporting expression builders render `["Sum", 2, 4, 3]` as _∑(2, 4, 3)_.
 
@@ -59,12 +73,40 @@ Performs basic subtraction.
 ["Subtract", 10, 5, 2]            # 10-5-2=3
 ```
 
+### SubtractScalar
+Subtracts a scalar value from each element of an array.
+
+```python
+["SubtractScalar", ["Array", 2, 3, 4], 1]            # ["Array", 1, 2, 3]
+```
+
+### SubtractArray
+Performs element-wise subtraction between two arrays of equal length.
+
+```python
+["SubtractArray", ["Array", 2, 3, 4], ["Array", 1, 2, 7]]  # ["Array", 1, 1, -3]
+```
+
 ### Multiply
 Performs basic multiplication.
 
 ```python
 ["Multiply", 2, 4]                # 2*4=8
 ["Multiply", 2, 3, 4]             # 2*3*4=24
+```
+
+### MultiplyByScalar
+Multiplies each element of an array by a scalar value.
+
+```python
+["MultiplyByScalar", ["Array", 2, 3, 4], 5]           # ["Array", 10, 15, 20]
+```
+
+### MultiplyByArray
+Performs element-wise multiplication between two arrays of equal length.
+
+```python
+["MultiplyByArray", ["Array", 2, 3, 4], ["Array", 1, 2, 3]]  # ["Array", 2, 6, 12]
 ```
 
 ### Divide
@@ -368,6 +410,40 @@ Length can also work with parameter references:
 ```python
 # With parameters = {"a": ["Array", 1, 2, 3, 5, 2, 9]}
 ["Length", "a"]                   # 6
+```
+
+### Array Manipulation Functions
+
+#### GenerateRange
+Generates an array of sequential numbers starting from 0 or a specified start value.
+
+```python
+["GenerateRange", 3]                              # ["Array", 0, 1, 2]
+["GenerateRange", 0]                              # ["Array"]
+["GenerateRange", 0, 3, 1]                       # ["Array", 0, 1, 2]
+["GenerateRange", 0, 10, 2]                      # ["Array", 0, 2, 4, 6, 8]
+```
+
+#### AtIndex
+Returns the element at a specific index in an array (0-based indexing).
+
+```python
+["AtIndex", ["Array", 10, 20, 30, 40], 2]         # 30
+```
+
+#### Slice
+Extracts a portion of an array between start and end indices (exclusive end).
+
+```python
+["Slice", ["Array", 10, 20, 30, 40, 50, 60], 2, 4]  # ["Array", 30, 40]
+["Slice", ["Array", 10, 20, 30, 40, 50, 60], 2, 5]  # ["Array", 30, 40, 50]
+```
+
+#### CumulativeProduct
+Calculates the cumulative product of array elements, returning an array where each element is the product of all elements up to that position.
+
+```python
+["CumulativeProduct", ["Array", 2, 3, 4, 5]]      # ["Array", 2, 6, 24, 120]
 ```
 
 ---
@@ -736,6 +812,26 @@ Computes a numerical integral using the trapezoidal rule. **Requires numpy to be
 ["TrapezoidalIntegrate", ["Exp", ["Variable", "x"]], 0, 1, 100, ["Variable", "x"]]  # ≈ 1.718
 ```
 
+### Interp
+Performs linear interpolation between data points. Given arrays of x and y values, interpolates the y value for a given x.
+
+```python
+["Interp", ["Array", 1, 2, 3], ["Array", 10, 20, 30], 2.5]     # 25
+["Interp", ["Array", 1, 2, 3], ["Array", 10, 20, 30], 1]       # 10
+["Interp", ["Array", 1, 2, 3], ["Array", 10, 20, 30], 3]       # 30
+["Interp", ["Array", 1, 3, 4], ["Array", 10, 30, 40], 2]       # 20
+```
+
+### FindIntervalIndex
+Finds the interval index where a value falls within a sorted array of bounds. Returns the index of the interval that contains the value.
+
+```python
+# With age_bounds = [0, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80]
+["FindIntervalIndex", ["Array", 0, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80], 42.5]  # 5
+["FindIntervalIndex", ["Array", 0, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80], 20]    # 1
+["FindIntervalIndex", ["Array", 0, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80], 80]    # 12
+```
+
 ### Function
 **Note: This is a placeholder function for future implementation.** Currently not functional.
 
@@ -754,10 +850,16 @@ Computes a numerical integral using the trapezoidal rule. **Requires numpy to be
 
 ### Basic Operations
 - [Add](#add) - Addition with type conversion
+- [AddScalar](#addscalar) - Add scalar to each array element
+- [AddArray](#addarray) - Element-wise array addition
 - [Sum](#sum) - Sum with nested array support
 - [Negate](#negate) - Sign inversion
 - [Subtract](#subtract) - Subtraction
+- [SubtractScalar](#subtractscalar) - Subtract scalar from each array element
+- [SubtractArray](#subtractarray) - Element-wise array subtraction
 - [Multiply](#multiply) - Multiplication
+- [MultiplyByScalar](#multiplybyscalar) - Multiply each array element by scalar
+- [MultiplyByArray](#multiplybyarray) - Element-wise array multiplication
 - [Divide](#divide) - Division
 
 ### Mathematical Functions
@@ -793,6 +895,10 @@ Computes a numerical integral using the trapezoidal rule. **Requires numpy to be
 - [Min](#min) - Minimum value
 - [Median](#median) - Median value
 - [Length](#length) - Array length
+- [GenerateRange](#generaterange) - Generate sequential number arrays
+- [AtIndex](#atindex) - Get element at specific index
+- [Slice](#slice) - Extract array portion
+- [CumulativeProduct](#cumulativeproduct) - Cumulative product calculation
 
 ### Boolean and Set Operations
 - [Any](#any) - Check if any element is truthy
@@ -837,3 +943,5 @@ Computes a numerical integral using the trapezoidal rule. **Requires numpy to be
 - [Function](#function) - Function definition (placeholder)
 - [Variable](#variable) - Variable reference
 - [TrapezoidalIntegrate](#trapezoidalintegrate) - Numerical integration
+- [Interp](#interp) - Linear interpolation
+- [FindIntervalIndex](#findintervalindex) - Find interval index for value

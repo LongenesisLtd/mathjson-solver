@@ -19,6 +19,107 @@ except ImportError:
 NoneType = type(None)
 
 
+# def find_interpolation_bounds(
+#     l: list, target: int | float
+# ) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
+#     for i, x in enumerate(l):
+#         if i == 0:
+#             continue
+#         if l[i - 1] <= target and target <= l[i]:
+#             if target == l[i - 1] or target == l[i]:
+#                 return target
+#             else:
+#                 return l[i - 1], l[i]
+#     else:
+#         raise ValueError("Target value is outside interpolation range.")
+
+
+def _MultiplyByScalar(l: list[numbers.Real], a: numbers.Real) -> list[numbers.Real]:
+    return [x * a for x in l]
+
+
+def _MultiplyByArray(
+    l1: list[numbers.Real], l2: list[numbers.Real]
+) -> list[numbers.Real]:
+    return [a * b for a, b in zip(l1, l2)]
+
+
+def _AddScalar(l: list[numbers.Real], a: numbers.Real) -> list[numbers.Real]:
+    return [x + a for x in l]
+
+
+def _SubtractScalar(l: list[numbers.Real], a: numbers.Real) -> list[numbers.Real]:
+    return [x - a for x in l]
+
+
+def _AddArray(l1: list[numbers.Real], l2: list[numbers.Real]) -> list[numbers.Real]:
+    return [a + b for a, b in zip(l1, l2)]
+
+
+def _SubtractArray(
+    l1: list[numbers.Real], l2: list[numbers.Real]
+) -> list[numbers.Real]:
+    return [a - b for a, b in zip(l1, l2)]
+
+
+def _CumulativeProduct(l: list) -> list:
+    res = []
+    for i, x in enumerate(l):
+        if i == 0:
+            res.append(x)
+        else:
+            res.append(reduce(lambda a, b: a * b, l[: i + 1]))
+    return res
+
+
+def find_interpolation_bounds_indexes(
+    l: list, target: int | float
+) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
+    for i, x in enumerate(l):
+        if i == 0:
+            continue
+        if l[i - 1] <= target and target <= l[i]:
+            if target == l[i - 1]:
+                return i - 1
+            elif target == l[i]:
+                return i
+            else:
+                return i - 1, i
+    else:
+        raise ValueError("Target value is outside interpolation range.")
+
+
+def find_interpolation_bounds_2indexes(
+    l: list, target: int | float
+) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
+    for i, x in enumerate(l):
+        if i == len(l) - 1:
+            return i - 1, i
+        if l[i] <= target and target < l[i + 1]:
+            return i, i + 1
+    else:
+        raise ValueError("Target value is outside interpolation range.")
+
+
+def linear_interpolate(x_array, y_array, target_x):
+    # Find the interval where target_x falls
+    # Handle edge cases (target_x outside range)
+    # Apply: y = y1 + (y2 - y1) * (target_x - x1) / (x2 - x1)
+
+    # first check if both arrays are the same length
+    if len(x_array) != len(y_array) or len(x_array) < 2:
+        raise ValueError(
+            "Both arrays need to be the same length and with at least 2 elements."
+        )
+    bounds_indexes = find_interpolation_bounds_indexes(x_array, target_x)
+    if isinstance(bounds_indexes, tuple):
+        x1, x2 = x_array[bounds_indexes[0]], x_array[bounds_indexes[1]]
+        y1, y2 = y_array[bounds_indexes[0]], y_array[bounds_indexes[1]]
+        return y1 + (y2 - y1) * (target_x - x1) / (x2 - x1)
+    else:
+        return y_array[bounds_indexes]
+
+
 class MathJSONException(Exception):
     """Exception for MathJSON processing issues"""
 
@@ -578,6 +679,204 @@ def create_mathjson_solver(solver_parameters):
                 return 0
                 # return f(function_expression, c) function_name(*parameters)
 
+            def MultiplyByScalar(s):
+                """
+                ["MultiplyByScalar", array, scalar]
+                The `array` must be an array of numeric values.
+                The `scalar` is the number to multiply each element by.
+                """
+                array = f(s[1], c)
+                scalar = f(s[2], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                return ["Array"] + _MultiplyByScalar(array, scalar)
+
+            def MultiplyByArray(s):
+                """
+                ["MultiplyByArray", array1, array2]
+                The `array1` and `array2` must be arrays of the same length.
+                """
+                array1 = f(s[1], c)
+                array2 = f(s[2], c)
+                if not (isinstance(array1, list) and array1[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                if not (isinstance(array2, list) and array2[0] == "Array"):
+                    raise ValueError("Parameter 2 must be an array.")
+                array1 = [f(x, c) for x in array1[1:]]
+                array2 = [f(x, c) for x in array2[1:]]
+                if len(array1) != len(array2):
+                    raise ValueError("Both arrays must be of the same length.")
+                return ["Array"] + _MultiplyByArray(array1, array2)
+
+            def AddScalar(s):
+                """
+                ["AddScalar", array, scalar]
+                The `array` must be an array of numeric values.
+                The `scalar` is the number to add to each element.
+                """
+                array = f(s[1], c)
+                scalar = f(s[2], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                return ["Array"] + _AddScalar(array, scalar)
+
+            def SubtractScalar(s):
+                """
+                ["SubtractScalar", array, scalar]
+                The `array` must be an array of numeric values.
+                The `scalar` is the number to subtract from each element.
+                """
+                array = f(s[1], c)
+                scalar = f(s[2], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                return ["Array"] + _SubtractScalar(array, scalar)
+
+            def AddArray(s):
+                """
+                ["AddArray", array1, array2]
+                The `array1` and `array2` must be arrays of the same length.
+                """
+                array1 = f(s[1], c)
+                array2 = f(s[2], c)
+                if not (isinstance(array1, list) and array1[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                if not (isinstance(array2, list) and array2[0] == "Array"):
+                    raise ValueError("Parameter 2 must be an array.")
+                array1 = [f(x, c) for x in array1[1:]]
+                array2 = [f(x, c) for x in array2[1:]]
+                if len(array1) != len(array2):
+                    raise ValueError("Both arrays must be of the same length.")
+                return ["Array"] + _AddArray(array1, array2)
+
+            def SubtractArray(s):
+                """
+                ["SubtractArray", array1, array2]
+                The `array1` and `array2` must be arrays of the same length.
+                """
+                array1 = f(s[1], c)
+                array2 = f(s[2], c)
+                if not (isinstance(array1, list) and array1[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                if not (isinstance(array2, list) and array2[0] == "Array"):
+                    raise ValueError("Parameter 2 must be an array.")
+                array1 = [f(x, c) for x in array1[1:]]
+                array2 = [f(x, c) for x in array2[1:]]
+                if len(array1) != len(array2):
+                    raise ValueError("Both arrays must be of the same length.")
+                return ["Array"] + _SubtractArray(array1, array2)
+
+            def GenerateRange(s):
+                """
+                ["GenerateRange", end]
+                or
+                ["GenerateRange", start, end, step]
+                The `start`, `end`, and `step` are numeric values.
+                """
+                if len(s) == 2:
+                    end = f(s[1], c)
+                    start = 0
+                    step = 1
+                elif len(s) == 4:
+                    start = f(s[1], c)
+                    end = f(s[2], c)
+                    step = f(s[3], c)
+                else:
+                    raise ValueError(
+                        "GenerateRange requires either 1 or 3 parameters (end or start, end, step)."
+                    )
+                if step == 0:
+                    raise ValueError("Step cannot be zero.")
+                if (start < end and step < 0) or (start > end and step > 0):
+                    raise ValueError("Step direction is incorrect for the given range.")
+                result = ["Array"]
+                if start < end:
+                    current = start
+                    while current < end:
+                        result.append(current)
+                        current += step
+                else:
+                    current = start
+                    while current > end:
+                        result.append(current)
+                        current += step
+                return result
+
+            def AtIndex(s):
+                """
+                ["AtIndex", array, index]
+                The `array` must be an array of values.
+                The `index` is the index of the element to retrieve.
+                """
+                array = f(s[1], c)
+                index = f(s[2], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                # array = [f(x, c) for x in array[1:]]
+                # return array[index]
+                array = [x for x in array[1:]]
+                return f(array[index], c)
+
+            def Slice(s):
+                """
+                ["Slice", array, start, end]
+                The `array` must be an array of values.
+                The `start` and `end` are the slice indices.
+                """
+                array = f(s[1], c)
+                start = f(s[2], c)
+                end = f(s[3], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                return ["Array"] + array[start:end]
+
+            def CumulativeProduct(s):
+                """
+                ["CumulativeProduct", array]
+                The `array` must be an array of numeric values.
+                """
+                array = f(s[1], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                return ["Array"] + _CumulativeProduct(array)
+                # return _CumulativeProduct(array)
+
+            def Interp(s):
+                """
+                ["Interp", x_array, y_array, target_x]
+                The `x_array` and `y_array` must be arrays of the same length.
+                The `target_x` is the x value to interpolate for.
+                """
+                x_array = f(s[1], c)
+                y_array = f(s[2], c)
+                target_x = f(s[3], c)
+                if not (isinstance(x_array, list) and x_array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                if not (isinstance(y_array, list) and y_array[0] == "Array"):
+                    raise ValueError("Parameter 2 must be an array.")
+                x_array = [f(x, c) for x in x_array[1:]]
+                y_array = [f(y, c) for y in y_array[1:]]
+                return linear_interpolate(x_array, y_array, target_x)
+
+            def FindIntervalIndex(s):
+                """
+                ["FindIntervalIndex", array, target_value]
+                The `array` must be an array of numeric values.
+                The `target_value` is the value to find the interval index for.
+                """
+                array = f(s[1], c)
+                target_value = f(s[2], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                zz = find_interpolation_bounds_2indexes(array, target_value)
+                return zz[0]
+
             def TrapezoidalIntegrate(s):
                 """
                 ["TrapezoidalIntegrate", function_expression, start, end, n, variable]
@@ -690,6 +989,18 @@ def create_mathjson_solver(solver_parameters):
                 "TimeDeltaDays": TimeDeltaDays,
                 "Function": Function,
                 "Variable": Variable,
+                "MultiplyByScalar": MultiplyByScalar,
+                "MultiplyByArray": MultiplyByArray,
+                "AddScalar": AddScalar,
+                "SubtractScalar": SubtractScalar,
+                "AddArray": AddArray,
+                "SubtractArray": SubtractArray,
+                "GenerateRange": GenerateRange,
+                "AtIndex": AtIndex,
+                "Slice": Slice,
+                "CumulativeProduct": CumulativeProduct,
+                "Interp": Interp,
+                "FindIntervalIndex": FindIntervalIndex,
                 "TrapezoidalIntegrate": TrapezoidalIntegrate,
                 "Sin": Sin,
                 "Cos": Cos,
@@ -798,6 +1109,19 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "TimeDeltaDays",
         "Function",
         "Variable",
+        "MultiplyByScalar",
+        "MultiplyByArray",
+        "AddScalar",
+        "SubtractScalar",
+        "AddArray",
+        "SubtractArray",
+        "GenerateRange",
+        "AtIndex",
+        "Slice",
+        "CumulativeProduct",
+        "Interp",
+        "FindIntervalIndex",
+        "TrapezoidalIntegrate",
         "TrapezoidalIntegrate",
         "Sin",
         "Cos",
