@@ -4,8 +4,6 @@ from functools import reduce
 import math
 from copy import deepcopy
 from statistics import median
-import logging
-import traceback
 import datetime
 
 NUMPY_AVAILABLE = False
@@ -344,7 +342,6 @@ def create_mathjson_solver(solver_parameters):
                     s_ = [float(f(x, c)) for x in f(s[1], c) if is_numeric(f(x, c))]
                 else:
                     s_ = [float(f(x, c)) for x in s[1][1:] if is_numeric(f(x, c))]
-                # print(f"{s_} {sum(s_)}/{len(s_)}")
                 try:
                     return sum(s_) / len(s_)
                 except ZeroDivisionError:
@@ -419,12 +416,9 @@ def create_mathjson_solver(solver_parameters):
                             try:
                                 return f(x[1], c)
                             except MathJSONException:
-                                logging.error(
-                                    "MathJSONException: %s", traceback.format_exc()
-                                )
+                                # Branch failed, try next condition
                                 continue
                     except MathJSONException:
-                        logging.error("MathJSONException: %s", traceback.format_exc())
                         return f(s[-1], c)  # return default value (else)
 
                 return f(s[-1], c)
@@ -902,7 +896,6 @@ def create_mathjson_solver(solver_parameters):
                     c[variable_name] = variable_value
                     values.append(f(function_expression, c))
                 h = (end - start) / n
-                # print("values=", values)
                 return h * (0.5 * values[0] + np.sum(values[1:-1]) + 0.5 * values[-1])
 
                 # return total_area
@@ -1021,13 +1014,13 @@ def create_mathjson_solver(solver_parameters):
                 #     return s[0]
                 # except Exception as e:
                 except TypeError as e:
-                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                    raise MathJSONException(e, s, mathjson_construct=s[0]) from e
                 except ValueError as e:
-                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                    raise MathJSONException(e, s, mathjson_construct=s[0]) from e
                 except IndexError as e:
-                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                    raise MathJSONException(e, s, mathjson_construct=s[0]) from e
                 except ZeroDivisionError as e:
-                    raise MathJSONException(e, s, mathjson_construct=s[0])
+                    raise MathJSONException(e, s, mathjson_construct=s[0]) from e
             else:
                 # raise MathJSONException(
                 #     NotImplementedError(f"'{s[0]}' is not supported"), s
