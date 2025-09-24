@@ -43,6 +43,11 @@ from mathjson_solver import create_solver
         ({}, ["NotEqual", 1, 2], True),
         ({}, ["NotEqual", "aaa", "bbb"], True),
         ({}, ["NotEqual", "aaa", 0], True),
+        ({}, ["And", True, True], True),
+        ({}, ["And", True, False], False),
+        ({}, ["Or", True, False], True),
+        ({}, ["Or", True, True], True),
+        ({}, ["Or", False, False], False),
     ],
 )
 def test_solver_comparison(parameters, expression, expected_result):

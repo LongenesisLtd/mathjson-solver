@@ -70,6 +70,16 @@ def _CumulativeProduct(l: list) -> list:
     return res
 
 
+def _CumulativeSum(l: list) -> list:
+    res = []
+    for i, x in enumerate(l):
+        if i == 0:
+            res.append(x)
+        else:
+            res.append(reduce(lambda a, b: a + b, l[: i + 1]))
+    return res
+
+
 def find_interpolation_bounds_indexes(
     l: list, target: int | float
 ) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
@@ -374,6 +384,12 @@ def create_mathjson_solver(solver_parameters):
             def Float(s):
                 return float(f(s[1], c))
 
+            def Floor(s):
+                return math.floor(f(s[1], c))
+
+            def Ceil(s):
+                return math.ceil(f(s[1], c))
+
             def Constants(s):
                 for x in s[1:-1]:
                     c[x[0]] = f(x[1], c)
@@ -629,6 +645,26 @@ def create_mathjson_solver(solver_parameters):
                 except TypeError:
                     return False
 
+            def BooleanAnd(s):
+                """
+                Boolean AND operation.
+                ["And", condition1, condition2, ...]
+                """
+                for x in s[1:]:
+                    if not f(x, c):
+                        return False
+                return True
+
+            def BooleanOr(s):
+                """
+                Boolean OR operation.
+                ["Or", condition1, condition2, ...]
+                """
+                for x in s[1:]:
+                    if f(x, c):
+                        return True
+                return False
+
             # sin, cos, tan, arcsin, arccos, arctan
             def Sin(s):
                 return math.sin(f(s[1], c))
@@ -840,6 +876,18 @@ def create_mathjson_solver(solver_parameters):
                 return ["Array"] + _CumulativeProduct(array)
                 # return _CumulativeProduct(array)
 
+            def CumulativeSum(s):
+                """
+                ["CumulativeSum", array]
+                The `array` must be an array of numeric values.
+                """
+                array = f(s[1], c)
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                array = [f(x, c) for x in array[1:]]
+                return ["Array"] + _CumulativeSum(array)
+                # return
+
             def Interp(s):
                 """
                 ["Interp", x_array, y_array, target_x]
@@ -900,6 +948,49 @@ def create_mathjson_solver(solver_parameters):
 
                 # return total_area
 
+            def Reduce(s):
+                """
+                ["Reduce", list, initial_value, function, str_name_of_accumulator, str_name_of_current, str_name_of_index]
+                """
+                the_list = f(s[1], c)[1:]
+                initial_value = f(s[2], c)
+                function_expression = s[3]
+
+                _accumulator = s[4]
+                name_accumulator = _accumulator[1]
+
+                _current = s[5]
+                name_current = _current[1]
+
+                _index = s[6]
+                name_index = _index[1]
+
+                c[name_accumulator] = initial_value
+
+                for i, x in enumerate(the_list):
+                    c[name_current] = x
+                    c[name_index] = i
+                    c[name_accumulator] = f(function_expression, c)
+
+                return c[name_accumulator]
+
+            def Appended(s):
+                """
+                ["Appended", array, value]
+                The `array` must be an array of values.
+                The `value` is the value to append to the array.
+                """
+                array = f(s[1], c)
+
+                if not (isinstance(array, list) and array[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+
+                value = f(s[2], c)
+
+                array = [x for x in array[1:]]
+                array.append(value)
+                return ["Array"] + array
+
             constructs = {
                 "Sum": Sum,
                 "Add": Add,
@@ -939,6 +1030,8 @@ def create_mathjson_solver(solver_parameters):
                 # "NotEqual": lambda s: f(s[1], c) != f(s[2], c),
                 "NotEqual": lambda s: comparison_safe_converter(f(s[1], c))
                 != comparison_safe_converter(f(s[2], c)),
+                "And": BooleanAnd,
+                "Or": BooleanOr,
                 "Abs": lambda s: abs(f(s[1], c)),
                 "Round": lambda s: (
                     round(f(s[1], c), f(s[2], c))
@@ -964,6 +1057,8 @@ def create_mathjson_solver(solver_parameters):
                 "ContainsNoneOf": Contains_none_of,
                 "Int": Int,
                 "Float": Float,
+                "Floor": Floor,
+                "Ceil": Ceil,
                 "Str": Str,
                 "Not": Not,
                 # "IsDefined": lambda s: s[1] in c,
@@ -992,9 +1087,12 @@ def create_mathjson_solver(solver_parameters):
                 "AtIndex": AtIndex,
                 "Slice": Slice,
                 "CumulativeProduct": CumulativeProduct,
+                "CumulativeSum": CumulativeSum,
                 "Interp": Interp,
                 "FindIntervalIndex": FindIntervalIndex,
                 "TrapezoidalIntegrate": TrapezoidalIntegrate,
+                "Reduce": Reduce,
+                "Appended": Appended,
                 "Sin": Sin,
                 "Cos": Cos,
                 "Tan": Tan,
@@ -1066,6 +1164,8 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Less",
         "LessEqual",
         "NotEqual",
+        "And",
+        "Or",
         "Abs",
         "Round",
         "Max",

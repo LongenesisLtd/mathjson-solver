@@ -37,6 +37,12 @@ from mathjson_solver import create_solver
         ({}, ["Round", ["Log", 2.7183], 3], 1.0),
         ({}, ["Log2", 8], 3),
         ({}, ["Log10", 1000], 3),
+        ({}, ["Floor", 4.7], 4),
+        ({}, ["Floor", 4.0], 4),
+        ({}, ["Floor", -2.3], -3),
+        ({}, ["Ceil", 4.1], 5),
+        ({}, ["Ceil", 4.0], 4),
+        ({}, ["Ceil", -2.3], -2),
     ],
 )
 def test_solver_arithmetics(parameters, expression, expected_result):

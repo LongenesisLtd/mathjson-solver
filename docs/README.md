@@ -177,6 +177,26 @@ Division by zero raises a `MathJSONException`:
 ["Round", 5.5]                    # 6
 ```
 
+### Floor and Ceiling
+
+#### Floor
+Returns the largest integer less than or equal to the given number.
+
+```python
+["Floor", 4.7]                    # 4
+["Floor", 4.0]                    # 4
+["Floor", -2.3]                   # -3
+```
+
+#### Ceil
+Returns the smallest integer greater than or equal to the given number.
+
+```python
+["Ceil", 4.1]                     # 5
+["Ceil", 4.0]                     # 4
+["Ceil", -2.3]                    # -2
+```
+
 ### Constants
 
 ```python
@@ -439,11 +459,123 @@ Extracts a portion of an array between start and end indices (exclusive end).
 ["Slice", ["Array", 10, 20, 30, 40, 50, 60], 2, 5]  # ["Array", 30, 40, 50]
 ```
 
+#### Reduce
+Reduces an array to a single value by iteratively applying a function that has access to an accumulator, current element, and index. This is a powerful functional programming construct that enables stateful computations over arrays.
+
+**Syntax:**
+```python
+["Reduce", array, initial_value, function_expression, accumulator_variable, current_variable, index_variable]
+```
+
+**Parameters:**
+- `array`: The array to reduce
+- `initial_value`: Starting value for the accumulator
+- `function_expression`: Expression to apply on each iteration (uses direct variable names, not `["Variable", ...]`)
+- `accumulator_variable`: Variable declaration for the accumulator (e.g., `["Variable", "acc"]`)
+- `current_variable`: Variable declaration for the current element (e.g., `["Variable", "item"]`)
+- `index_variable`: Variable declaration for the current index (e.g., `["Variable", "i"]`)
+
+**Important:** In the `function_expression`, use direct variable names (e.g., `"accumulator"`, `"current_item"`), not variable declarations. Variable declarations (`["Variable", "name"]`) are only used in the parameter list.
+
+**Simple Examples:**
+
+```python
+# Simple sum: equivalent to [1,2,3,4].reduce((acc, item) => acc + item, 0)
+["Reduce", ["Array", 1, 2, 3, 4], 0,
+  ["Add", "accumulator", "current_item"],
+  ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]]  # 10
+
+# Sum with index weighting: sum of (item * index)
+["Reduce", ["Array", 5, 10, 15], 0,
+  ["Add", "accumulator", ["Multiply", "current_item", "index"]],
+  ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]]  # 40
+
+# Building an array by appending elements
+["Reduce", ["Array", 1, 2, 3, 4], ["Array"],
+  ["Appended", "accumulator", "current_item"],
+  ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]]  # ["Array", 1, 2, 3, 4]
+```
+
+**State Tuple Examples (Advanced):**
+
+State tuples allow maintaining multiple accumulators simultaneously, essential for complex algorithms:
+
+```python
+# Accumulate both sum and count: [sum, count]
+["Reduce", ["Array", 1, 2, 3, 4], ["Array", 0, 0],
+  ["Appended",
+    ["Appended",
+      ["Array"],
+      ["Add", ["AtIndex", "accumulator", 0], "current_item"]  # new_sum
+    ],
+    ["Add", ["AtIndex", "accumulator", 1], 1]                 # new_count
+  ],
+  ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]]
+# Result: ["Array", 10, 4]
+
+# Accumulate sum and product simultaneously: [sum, product]
+["Reduce", ["Array", 2, 3, 4], ["Array", 0, 1],
+  ["Appended",
+    ["Appended",
+      ["Array"],
+      ["Add", ["AtIndex", "accumulator", 0], "current_item"]       # sum
+    ],
+    ["Multiply", ["AtIndex", "accumulator", 1], "current_item"]    # product
+  ],
+  ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]]
+# Result: ["Array", 9, 24]
+
+# Extract single value from state tuple using Constants and AtIndex
+["Constants",
+  ["state_result", [
+    "Reduce", ["Array", 2, 3, 4], ["Array", 0, 1],
+    ["Appended",
+      ["Appended",
+        ["Array"],
+        ["Add", ["AtIndex", "accumulator", 0], "current_item"]
+      ],
+      ["Multiply", ["AtIndex", "accumulator", 1], "current_item"]
+    ],
+    ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]
+  ]],
+  ["AtIndex", "state_result", 0]  # Extract just the sum: 9
+]
+```
+
+**Key Pattern for State Tuples:**
+When building state tuples with multiple values, use the nested `Appended` pattern:
+```python
+["Appended",
+  ["Appended",
+    ["Array"],        # Start with empty array
+    first_value       # Add first state value
+  ],
+  second_value        # Add second state value
+]
+```
+
+This pattern can be extended for any number of state variables by adding more nested `Appended` calls.
+
+#### Appended
+Appends a value to the end of an array, returning a new array with the added element.
+
+```python
+["Appended", ["Array", 1, 2, 3], 4]                # ["Array", 1, 2, 3, 4]
+["Appended", ["Array"], "first"]                   # ["Array", "first"]
+```
+
 #### CumulativeProduct
 Calculates the cumulative product of array elements, returning an array where each element is the product of all elements up to that position.
 
 ```python
 ["CumulativeProduct", ["Array", 2, 3, 4, 5]]      # ["Array", 2, 6, 24, 120]
+```
+
+#### CumulativeSum
+Calculates the cumulative sum of array elements, returning an array where each element is the sum of all elements up to that position.
+
+```python
+["CumulativeSum", ["Array", 1, 2, 3, 4, 5]]       # ["Array", 1, 3, 6, 10, 15]
 ```
 
 ---
@@ -476,6 +608,28 @@ Returns the logical negation of a value. Any truthy value becomes `False`, any f
 ["Not", True]                     # False
 ["Not", 0]                        # True
 ["Not", ["In", 2, ["Array", 1, 2, 3]]]  # False
+```
+
+#### And
+Returns `True` if all conditions are truthy, `False` otherwise. Supports multiple conditions.
+
+```python
+["And", True, True]               # True
+["And", True, False]              # False
+["And", 1, 2, 3]                  # True (all truthy)
+["And", 1, 0, 3]                  # False (0 is falsy)
+["And", ["Greater", 5, 3], ["Less", 2, 4]]  # True
+```
+
+#### Or
+Returns `True` if any condition is truthy, `False` if all are falsy. Supports multiple conditions.
+
+```python
+["Or", True, False]               # True
+["Or", False, False]              # False
+["Or", 0, 0, 1]                   # True (at least one truthy)
+["Or", 0, "", False]              # False (all falsy)
+["Or", ["Greater", 5, 3], ["Greater", 2, 4]]  # True
 ```
 
 ### Set Operations
@@ -778,11 +932,37 @@ Advanced function for checking if a sublist within an array matches specific con
 ## Integration Functions
 
 ### Variable
-References a variable in an integrable expression. Used specifically with `TrapezoidalIntegrate` to define the integration variable.
+References a variable in expressions. The usage of `Variable` depends on the context:
+
+**Integration Context:**
+Used with `TrapezoidalIntegrate` to define the integration variable.
 
 ```python
-["Variable", "x"]  # References variable "x"
+["Variable", "x"]  # References variable "x" for integration
 ```
+
+**Reduce Context (Variable Declarations):**
+Used only in the parameter list of `Reduce` to declare variable names. In the function expression itself, use direct variable names.
+
+```python
+# Correct usage in Reduce
+["Reduce", ["Array", 1, 2, 3], 0,
+  ["Add", "accumulator", "current_item"],        # Direct variable names in expression
+  ["Variable", "accumulator"],                   # Variable declaration
+  ["Variable", "current_item"],                  # Variable declaration
+  ["Variable", "index"]                          # Variable declaration
+]
+
+# INCORRECT - Don't use ["Variable", ...] inside the function expression:
+["Reduce", ["Array", 1, 2, 3], 0,
+  ["Add", ["Variable", "accumulator"], ["Variable", "current_item"]],  # Wrong!
+  ["Variable", "accumulator"], ["Variable", "current_item"], ["Variable", "index"]
+]
+```
+
+**General Rule:**
+- Use `["Variable", "name"]` for variable **declarations** (parameter lists, integration variables)
+- Use `"name"` (direct string) for variable **references** in expressions
 
 ### TrapezoidalIntegrate
 Computes a numerical integral using the trapezoidal rule. **Requires numpy to be installed.**
@@ -873,6 +1053,8 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Log10](#exponents-and-logarithms) - Base-10 logarithm
 - [Abs](#absolute-value) - Absolute value
 - [Round](#rounding) - Rounding
+- [Floor](#floor-and-ceiling) - Floor function
+- [Ceil](#floor-and-ceiling) - Ceiling function
 
 ### Comparison Operations
 - [Equal](#equality) - Flexible equality
@@ -899,11 +1081,16 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [AtIndex](#atindex) - Get element at specific index
 - [Slice](#slice) - Extract array portion
 - [CumulativeProduct](#cumulativeproduct) - Cumulative product calculation
+- [CumulativeSum](#cumulativesum) - Cumulative sum calculation
+- [Reduce](#reduce) - Reduce array to single value with accumulator
+- [Appended](#appended) - Append value to array
 
 ### Boolean and Set Operations
 - [Any](#any) - Check if any element is truthy
 - [All](#all) - Check if all elements are truthy
 - [Not](#not) - Logical negation
+- [And](#and) - Logical AND operation
+- [Or](#or) - Logical OR operation
 - [In](#in) - Check membership
 - [Not_in / NotIn](#not_in--notin) - Check non-membership
 - [Contains_any_of / ContainsAnyOf](#contains_any_of--containsanyof) - Check overlap

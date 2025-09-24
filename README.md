@@ -8,8 +8,6 @@ A reliable Python library for numerically evaluating mathematical expressions in
 
 **What is MathJSON?** MathJSON represents mathematical expressions as JSON arrays, like `["Add", 1, 2, 3]` for 1+2+3. This format is safe, structured, and easy to generate programmatically.
 
-Inspired by [CortexJS Compute Engine](https://cortexjs.io/compute-engine/) though designed as an independent implementation focused on our specific use cases.
-
 ## Table of Contents
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -55,21 +53,32 @@ except MathJSONException as e:
     # Math error: Problem in Divide. ['Divide', 1, 0]. division by zero
 ```
 
+**Think Functional:** MathJSON Solver embraces functional programming principles. Instead of writing loops and modifying variables, you compose expressions that transform data. Functions like `Map`, `Reduce`, and `Filter` let you process arrays elegantly, while immutable operations ensure predictable, side-effect-free calculations. Don't worry if you're new to functional programming — the examples will guide you naturally into this powerful paradigm.
+
+```python
+# Functional approach: transform data with expressions
+solver(["Map", ["Array", 1, 2, 3, 4], ["Multiply"], 2])  # [2, 4, 6, 8]
+solver(["Reduce", ["Array", 1, 2, 3, 4], 0, ["Add", "acc", "item"],
+        ["Variable", "acc"], ["Variable", "item"], ["Variable", "i"]])  # 10
+```
+
 ## Supported Operations
 
 The library supports a comprehensive set of mathematical operations:
 
-* **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round
+* **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round, Floor, Ceil
 * **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan
 * **Logarithms:** Log, Log2, Log10, Exp
 * **Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
-* **Logic & Sets:** Any, All, Not, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
+* **Logic & Sets:** Any, All, Not, And, Or, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
 * **Statistics:** Average, Max, Min, Median, Length
-* **Arrays:** Array creation and manipulation with Map function
+* **Functional Programming:** Map, Reduce, Filter
+* **Arrays:** Array creation, GenerateRange, AtIndex, Slice, Appended, CumulativeSum, CumulativeProduct
 * **Control Flow:** If statements, Switch-Case, Constants definition
 * **Type Conversion:** Int, Float, Str, IsDefined
-* **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions
-* **Advanced:** HasMatchingSublist, TrapezoidalIntegrate (requires numpy), Variable references
+* **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
+* **Integration:** TrapezoidalIntegrate (requires numpy), Interp, FindIntervalIndex, Variable references
+* **Advanced:** HasMatchingSublist for pattern matching
 * **Constants:** Pi
 
 [View complete documentation with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
@@ -135,6 +144,10 @@ We welcome contributions! Please feel free to:
 ## License
 
 [View license information](https://github.com/LongenesisLtd/mathjson-solver/blob/main/LICENSE)
+
+## References
+
+This implementation was inspired by the [CortexJS Compute Engine](https://cortexjs.io/compute-engine/), though designed as an independent implementation focused on our specific use cases.
 
 ---
 
