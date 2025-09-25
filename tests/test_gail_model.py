@@ -18,7 +18,7 @@ from mathjson_solver import create_solver
 
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="NumPy not available")
-def test_gail_model1():
+def test_1989_gail_model1():
     parameters = {
         "AGEMEN": 1,  # Age at menarche (12-13 years)
         "NBIOPS": 1,  # 1 previous biopsy

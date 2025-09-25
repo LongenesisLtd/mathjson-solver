@@ -15,9 +15,9 @@ setuptools.setup(
     project_urls={
         "Bug Tracker": "https://github.com/LongenesisLtd/mathjson-solver/issues",
     },
+    license_expr="MIT",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     package_dir={"": "src"},
