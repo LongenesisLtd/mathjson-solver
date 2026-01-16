@@ -17,6 +17,22 @@ except ImportError:
 NoneType = type(None)
 
 
+def _try_parse_datetime(value):
+    """Try to parse a string as datetime or date. Returns original value if not parseable."""
+    if isinstance(value, (datetime.datetime, datetime.date)):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.datetime.fromisoformat(value)
+        except ValueError:
+            pass
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
+            pass
+    return value
+
+
 # def find_interpolation_bounds(
 #     l: list, target: int | float
 # ) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
@@ -294,16 +310,19 @@ def create_mathjson_solver(solver_parameters):
                     if i == 0:
                         tmp = res
                     else:
+                        # Handle datetime string + timedelta
+                        if isinstance(res, datetime.timedelta):
+                            tmp = _try_parse_datetime(tmp)
+                        elif isinstance(tmp, datetime.timedelta):
+                            res = _try_parse_datetime(res)
                         try:
                             tmp = tmp + res
                         except TypeError:
                             pass
 
-                    # if isinstance(res, list):
-                    #     l_res.append(sum([xx for xx in res[1:]]))
-                    # else:
-                    #     l_res.append(res)
-
+                # Convert datetime result back to string
+                if isinstance(tmp, (datetime.datetime, datetime.date)):
+                    return tmp.isoformat()
                 return tmp
 
                 # tmp = 0
@@ -333,6 +352,22 @@ def create_mathjson_solver(solver_parameters):
                     else:
                         l_res.append(res)
                 return Add(l_res)
+
+            def Subtract(s):
+                values = [f(x, c) for x in s[1:]]
+                # Convert datetime strings if we're dealing with timedelta
+                converted = []
+                for i, v in enumerate(values):
+                    if isinstance(v, datetime.timedelta):
+                        converted.append(v)
+                    elif any(isinstance(other, datetime.timedelta) for other in values):
+                        converted.append(_try_parse_datetime(v))
+                    else:
+                        converted.append(v)
+                result = reduce(lambda a, b: a - b, converted)
+                if isinstance(result, (datetime.datetime, datetime.date)):
+                    return result.isoformat()
+                return result
 
             def Max(s):
                 if isinstance(s[1], str):
@@ -370,10 +405,16 @@ def create_mathjson_solver(solver_parameters):
                     return len([x for x in s[1][1:]])
 
             def Any(s):
-                return any([f(x, c) for x in s[1][1:]])
+                evaluated = f(s[1], c)
+                if isinstance(evaluated, list) and evaluated[0] == "Array":
+                    return any([f(x, c) for x in evaluated[1:]])
+                raise ValueError("Parameter 1 must be an array.")
 
             def All(s):
-                return all([f(x, c) for x in s[1][1:]])
+                evaluated = f(s[1], c)
+                if isinstance(evaluated, list) and evaluated[0] == "Array":
+                    return all([f(x, c) for x in evaluated[1:]])
+                raise ValueError("Parameter 1 must be an array.")
 
             def Int(s):
                 try:
@@ -572,18 +613,18 @@ def create_mathjson_solver(solver_parameters):
             def Strptime(s):
                 datetime_str = f(s[1], c)
                 parameters = f(s[2], c)
-                return datetime.datetime.strptime(datetime_str, parameters)
+                return datetime.datetime.strptime(datetime_str, parameters).isoformat()
 
             def Strftime(s):
-                dt = f(s[1], c)
+                dt = _try_parse_datetime(f(s[1], c))
                 parameters = f(s[2], c)
                 return dt.strftime(parameters)
 
             def Now(s):
-                return datetime.datetime.now()
+                return datetime.datetime.now().isoformat()
 
             def Today(s):
-                return datetime.date.today()
+                return datetime.date.today().isoformat()
 
             def TimeDeltaDays(s):
                 return datetime.timedelta(days=f(s[1], c))
@@ -994,9 +1035,7 @@ def create_mathjson_solver(solver_parameters):
             constructs = {
                 "Sum": Sum,
                 "Add": Add,
-                "Subtract": lambda s: reduce(
-                    lambda a, b: a - b, [f(x, c) for x in s[1:]]
-                ),
+                "Subtract": Subtract,
                 "Constants": Constants,
                 "Switch": Switch,
                 "StrictSwitch": StrictSwitch,

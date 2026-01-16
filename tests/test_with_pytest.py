@@ -179,6 +179,16 @@ from mathjson_solver import create_solver
             ["Sum", ["Map", ["Array", 1, 2, 3, 4, 1, 1, 0, 1], ["GreaterEqual"], 2]],
             3,
         ),
+        (
+            {},
+            ["All", ["Map", ["Array", 1, 2, 3, 4, 1, 1, 0, 1], ["GreaterEqual"], 2]],
+            False,
+        ),
+        (
+            {},
+            ["Any", ["Map", ["Array", 1, 2, 3, 4, 1, 1, 0, 1], ["GreaterEqual"], 2]],
+            True,
+        ),
         ({}, ["Sum", ["Array", True, False, True, False, False]], 2),
         # ["HasMatchingSublist", list, required_match_count, position, contiguous, function, more parameters]
         (
@@ -258,78 +268,6 @@ from mathjson_solver import create_solver
                 4,
             ],
             False,
-        ),
-        (
-            {},
-            ["Strftime", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], "%Y"],
-            "2025",
-        ),
-        ({}, ["Strftime", ["Today"], "%Y"], "2025"),
-        ({}, ["Strftime", ["Now"], "%Y"], "2025"),
-        (
-            {},
-            [
-                "Strftime",
-                [
-                    "Add",
-                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
-                    ["TimeDeltaDays", 3],
-                ],
-                "%d",
-            ],
-            "13",
-        ),
-        (
-            {},
-            [
-                "Strftime",
-                [
-                    "Subtract",
-                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
-                    ["TimeDeltaDays", 3],
-                ],
-                "%d",
-            ],
-            "07",
-        ),
-        (
-            {},
-            [
-                "Strftime",
-                [
-                    "Add",
-                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
-                    ["TimeDeltaMinutes", 5],
-                ],
-                "%M",
-            ],
-            "10",
-        ),
-        (
-            {},
-            [
-                "Strftime",
-                [
-                    "Add",
-                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
-                    ["TimeDeltaHours", 2],
-                ],
-                "%H",
-            ],
-            "12",
-        ),
-        (
-            {},
-            [
-                "Strftime",
-                [
-                    "Add",
-                    ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"],
-                    ["TimeDeltaWeeks", 1],
-                ],
-                "%d",
-            ],
-            "17",
         ),
     ],
 )

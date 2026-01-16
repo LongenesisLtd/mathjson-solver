@@ -757,69 +757,98 @@ Converts a value to a string representation.
 
 ## Date and Time Functions
 
-### Date/Time Parsing and Formatting
-
-#### Strptime
-Parses a date/time string according to a format specification, returning a datetime object.
-
-```python
-["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"]
-```
-
-#### Strftime
-Formats a datetime object as a string according to a format specification.
-
-```python
-["Strftime", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], "%Y"]     # "2025"
-["Strftime", ["Today"], "%Y"]                                              # "2025"
-["Strftime", ["Now"], "%Y"]                                                # "2025"
-```
+Date and time functions return **ISO format strings** by default, making them easy to use directly without additional formatting. When datetime arithmetic is needed, string dates are automatically parsed back to datetime objects.
 
 ### Current Date/Time
 
 #### Today
-Returns the current date (without time).
+Returns the current date as an ISO format string (`YYYY-MM-DD`).
 
 ```python
+["Today"]                        # "2025-01-16"
 ["Strftime", ["Today"], "%Y"]    # "2025"
 ```
 
 #### Now
-Returns the current date and time.
+Returns the current date and time as an ISO format string (`YYYY-MM-DDTHH:MM:SS.ffffff`).
 
 ```python
+["Now"]                          # "2025-01-16T14:30:45.123456"
 ["Strftime", ["Now"], "%Y"]      # "2025"
 ```
 
+### Date/Time Parsing and Formatting
+
+#### Strptime
+Parses a date/time string according to a format specification, returning an ISO format string.
+
+```python
+["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"]    # "2025-01-10T10:05:00"
+["Strptime", "10/Jan/2025", "%d/%b/%Y"]               # "2025-01-10T00:00:00"
+```
+
+#### Strftime
+Formats a datetime as a string according to a format specification. Accepts both datetime objects and ISO format strings as input.
+
+```python
+["Strftime", ["Today"], "%Y-%m-%d"]                   # "2025-01-16"
+["Strftime", ["Now"], "%H:%M:%S"]                     # "14:30:45"
+["Strftime", "2025-06-15T14:30:00", "%Y-%m-%d"]       # "2025-06-15" (string input)
+["Strftime", "2025-06-15", "%B %d, %Y"]               # "June 15, 2025" (date string input)
+```
+
 ### Time Deltas
+
+Time delta functions create durations that can be added to or subtracted from dates. When used with `Add` or `Subtract`, string dates are automatically parsed and the result is returned as an ISO format string.
+
+#### TimeDeltaDays
+Creates a time delta representing a number of days.
+
+```python
+["Add", ["Today"], ["TimeDeltaDays", 7]]              # "2025-01-23T00:00:00"
+["Subtract", ["Today"], ["TimeDeltaDays", 3]]         # "2025-01-13T00:00:00"
+["Add", "2025-01-10", ["TimeDeltaDays", 5]]           # "2025-01-15T00:00:00" (string input)
+```
 
 #### TimeDeltaWeeks
 Creates a time delta representing a number of weeks.
 
 ```python
-["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaWeeks", 1]], "%d"]  # "17"
+["Add", ["Today"], ["TimeDeltaWeeks", 2]]             # "2025-01-30T00:00:00"
+["Add", "2025-01-10", ["TimeDeltaWeeks", 1]]          # "2025-01-17T00:00:00"
 ```
 
 #### TimeDeltaHours
 Creates a time delta representing a number of hours.
 
 ```python
-["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaHours", 2]], "%H"]  # "12"
+["Add", ["Now"], ["TimeDeltaHours", 3]]               # adds 3 hours to current time
+["Add", "2025-01-10T10:00:00", ["TimeDeltaHours", 2]] # "2025-01-10T12:00:00"
 ```
 
 #### TimeDeltaMinutes
 Creates a time delta representing a number of minutes.
 
 ```python
-["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaMinutes", 5]], "%M"]  # "10"
+["Add", ["Now"], ["TimeDeltaMinutes", 30]]            # adds 30 minutes to current time
+["Add", "2025-01-10T10:00:00", ["TimeDeltaMinutes", 45]] # "2025-01-10T10:45:00"
 ```
 
-#### TimeDeltaDays
-Creates a time delta representing a number of days.
+### Combining Date Operations
+
+Date functions can be chained together for complex date calculations:
 
 ```python
-["Strftime", ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaDays", 3]], "%d"]      # "13"
-["Strftime", ["Subtract", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaDays", 3]], "%d"] # "07"
+# Get the date 10 days from today, formatted
+["Strftime", ["Add", ["Today"], ["TimeDeltaDays", 10]], "%B %d, %Y"]    # "January 26, 2025"
+
+# Parse a date, add time, and format
+["Strftime",
+  ["Add", ["Strptime", "2025-01-10T10:05", "%Y-%m-%dT%H:%M"], ["TimeDeltaHours", 2]],
+  "%H:%M"]                                                               # "12:05"
+
+# Multiple time delta operations
+["Add", ["Add", ["Today"], ["TimeDeltaDays", 1]], ["TimeDeltaHours", 12]]  # tomorrow at noon
 ```
 
 ---
@@ -1104,14 +1133,14 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [IsDefined](#isdefined) - Check if defined
 
 ### Date and Time Functions
-- [Strptime](#strptime) - Parse date/time string
-- [Strftime](#strftime) - Format date/time
-- [Today](#today) - Current date
-- [Now](#now) - Current date/time
+- [Today](#today) - Current date (ISO string)
+- [Now](#now) - Current date/time (ISO string)
+- [Strptime](#strptime) - Parse date/time string (returns ISO string)
+- [Strftime](#strftime) - Format date/time (accepts strings)
+- [TimeDeltaDays](#timedeltadays) - Day time delta
 - [TimeDeltaWeeks](#timedeltaweeks) - Week time delta
 - [TimeDeltaHours](#timedeltahours) - Hour time delta
 - [TimeDeltaMinutes](#timedeltaminutes) - Minute time delta
-- [TimeDeltaDays](#timedeltadays) - Day time delta
 
 ### Trigonometric Functions
 - [Sin](#sin) - Sine
