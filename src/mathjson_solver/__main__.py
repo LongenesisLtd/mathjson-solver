@@ -266,13 +266,10 @@ def has_matching_sublist(
 
 
 def comparison_safe_converter(x):
-    if type(x) in [int, float, str]:
+    if type(x) in [bool, NoneType]:  # bool before int (bool IS an int in Python)
+        return "1" if x else "0"
+    elif type(x) in [int, float, str]:
         return f"{x}"
-    elif type(x) in [bool, NoneType]:
-        if x:
-            return True
-        else:
-            return False
     return x
 
 
@@ -1057,6 +1054,8 @@ def create_mathjson_solver(solver_parameters):
                 # "Equal": lambda s: f"{f(s[1], c)}" == f"{f(s[2], c)}",
                 "Equal": lambda s: comparison_safe_converter(f(s[1], c))
                 == comparison_safe_converter(f(s[2], c)),
+                "IsTrue": lambda s: bool(f(s[1], c)),
+                "IsFalse": lambda s: not bool(f(s[1], c)),
                 "StrictEqual": lambda s: f(s[1], c) == f(s[2], c),
                 # "Greater": lambda s: f(s[1], c) > f(s[2], c),
                 "Greater": Greater,
@@ -1198,6 +1197,8 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Log10",
         "Ln",
         "Equal",
+        "IsTrue",
+        "IsFalse",
         "Greater",
         "GreaterEqual",
         "Less",

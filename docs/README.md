@@ -210,7 +210,7 @@ Returns the smallest integer greater than or equal to the given number.
 
 The _mathjson-solver_ provides two comparison operators that require additional explanation: `Equal` and `StrictEqual`, each designed to serve different use cases depending on the required level of strictness in comparisons.
 
-The `Equal` operator is intentionally forgiving, allowing for more flexible comparisons where certain values are treated as equivalent even if they are of different types. For example, `Equal` considers `1` and `"1"` (a string representation of the number) as the same, making it useful in scenarios where type differences are not critical. Additionally, `Equal` treats `False` and `None` as equivalent, which can be beneficial in cases where both represent the absence or falsity of a value.
+The `Equal` operator is intentionally forgiving, allowing for more flexible comparisons where certain values are treated as equivalent even if they are of different types. For example, `Equal` considers `1` and `"1"` (a string representation of the number) as the same, making it useful in scenarios where type differences are not critical. Additionally, `Equal` treats `False`, `None`, and `0` as equivalent (all map to `"0"`), and `True` and `1` as equivalent (both map to `"1"`), consistent with Python's `bool`-as-`int` semantics.
 
 On the other hand, `StrictEqual` enforces a more precise comparison by considering both the value and type. Under `StrictEqual`, `1` and `"1"` are distinct because one is an integer and the other is a string. Likewise, False and None are treated as separate entities, ensuring that comparisons strictly adhere to data type consistency. This makes `StrictEqual` ideal for cases where exact type matching is necessary to maintain data integrity.
 
@@ -225,10 +225,43 @@ On the other hand, `StrictEqual` enforces a more precise comparison by consideri
 ["Equal", "aaa", "aaa"]           # "aaa" == "aaa" ➞ True
 ["Equal", "aaa", "bbb"]           # "aaa" == "bbb" ➞ False
 
+# bool/int equivalence
+["Equal", True, 1]                # True
+["Equal", True, "1"]              # True
+["Equal", False, 0]               # True
+["Equal", False, None]            # True
+
 ["NotEqual", 1, 1]                # 1≠1 ➞  False
 ["NotEqual", 1, 2]                # 1≠2 ➞  True
 ["NotEqual", "aaa", "bbb"]        # "aaa≠"bbb" ➞  True
 ["NotEqual", "aaa", 0]            # "aaa≠0 ➞  True
+```
+
+### IsTrue and IsFalse
+
+Explicit truthiness checks. Prefer these over `Equal(x, 1)` when the intent is "did this condition hold?" — they mirror the truthiness semantics of `If`.
+
+```python
+["IsTrue", 1]                     # True
+["IsTrue", 0]                     # False
+["IsTrue", True]                  # True
+["IsTrue", False]                 # False
+["IsTrue", None]                  # False
+
+["IsFalse", 0]                    # True
+["IsFalse", 1]                    # False
+["IsFalse", False]                # True
+["IsFalse", True]                 # False
+["IsFalse", None]                 # True
+```
+
+A typical use case is checking the result of `All` or `Any`:
+
+```python
+["If",
+  [["IsTrue", ["All", ["Array", condition1, condition2]]], result],
+  fallback
+]
 ```
 
 ### Comparison
@@ -1086,13 +1119,15 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Ceil](#floor-and-ceiling) - Ceiling function
 
 ### Comparison Operations
-- [Equal](#equality) - Flexible equality
+- [Equal](#equality) - Flexible equality (bool/int aware)
 - [StrictEqual](#equality) - Strict equality
 - [NotEqual](#equality) - Inequality
 - [Greater](#comparison) - Greater than
 - [GreaterEqual](#comparison) - Greater than or equal
 - [Less](#comparison) - Less than
 - [LessEqual](#comparison) - Less than or equal
+- [IsTrue](#istrue-and-isfalse) - Explicit truthiness check
+- [IsFalse](#istrue-and-isfalse) - Explicit falsiness check
 
 ### Control Flow
 - [Constants](#constants) - Define constants
