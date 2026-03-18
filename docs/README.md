@@ -309,6 +309,26 @@ The following example has two constants defined - `x=10` and `y=20`. Then the su
 ]
 ```
 
+#### Null propagation
+
+If a constant definition raises an exception (e.g. because a referenced parameter is missing), that constant is set to `None` instead of crashing the entire expression. This allows `If` to select the valid branch at runtime:
+
+```python
+# With parameters = {"new_val": 22.5}   (old_val is missing)
+[
+    "Constants",
+    ["c_old", ["Divide", "old_val", 2]],   # raises → None
+    ["c_new", ["Divide", "new_val", 2]],   # 11.25
+    ["If",
+        [["Greater", "c_new", 0], "c_new"],
+        "c_old"
+    ]
+]
+# Result: 11.25  (c_old was never needed)
+```
+
+A constant that failed to compute can be detected with `["Equal", "c_old", None]`.
+
 ### If Statement
 ```
 [
@@ -779,12 +799,32 @@ Converts a value to a string representation.
 ```
 
 ### IsDefined
-**Note: This is a placeholder function for future implementation.** Supposed to check if a parameter name exists in the parameters dictionary.
+Returns `True` if the given name exists as a solver parameter or as a `Constants`-defined constant, `False` otherwise.
 
 ```python
 # With parameters = {"a": 12}
+["IsDefined", "a"]                # True
 ["IsDefined", "b"]                # False
+
+# Inside Constants
+["Constants", ["x", 5], ["IsDefined", "x"]]   # True
+["Constants", ["x", 5], ["IsDefined", "y"]]   # False
 ```
+
+### IsUndefined
+The logical complement of `IsDefined`. Returns `True` if the name is not defined, `False` if it is.
+
+```python
+# With parameters = {"a": 12}
+["IsUndefined", "a"]              # False
+["IsUndefined", "b"]              # True
+
+# Inside Constants
+["Constants", ["x", 5], ["IsUndefined", "x"]]   # False
+["Constants", ["x", 5], ["IsUndefined", "y"]]   # True
+```
+
+Note: when a `Constants` definition raises an exception, that constant is set to `None` (see null-propagation below). In that case `IsUndefined` still returns `False` — the name is defined, just with a `None` value. Use `["Equal", "val", None]` to test for that explicitly.
 
 ---
 
@@ -1166,6 +1206,7 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Float](#float) - Convert to float
 - [Str](#str) - Convert to string
 - [IsDefined](#isdefined) - Check if defined
+- [IsUndefined](#isundefined) - Check if not defined
 
 ### Date and Time Functions
 - [Today](#today) - Current date (ISO string)

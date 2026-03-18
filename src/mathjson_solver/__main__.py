@@ -430,7 +430,10 @@ def create_mathjson_solver(solver_parameters):
 
             def Constants(s):
                 for x in s[1:-1]:
-                    c[x[0]] = f(x[1], c)
+                    try:
+                        c[x[0]] = f(x[1], c)
+                    except Exception:
+                        c[x[0]] = None
                 return f(s[-1], c)
 
             def Switch(s):
@@ -652,8 +655,10 @@ def create_mathjson_solver(solver_parameters):
             #     lambda s: f"{f(s[1], c)}" == f"{f(s[2], c)}",
 
             def IsDefined(s):
-                # Todo: This does not work
-                return s[1] in c.keys()
+                return s[1] in solver_parameters or s[1] in c
+
+            def IsUndefined(s):
+                return not IsDefined(s)
 
             def Greater(s):
                 v1, v2 = comparison_safe_converter_for_pairs(f(s[1], c), f(s[2], c))
@@ -1101,6 +1106,7 @@ def create_mathjson_solver(solver_parameters):
                 "Not": Not,
                 # "IsDefined": lambda s: s[1] in c,
                 "IsDefined": IsDefined,
+                "IsUndefined": IsUndefined,
                 "Map": Map,
                 "StrictMap": StrictMap,
                 "Filter": Filter,
@@ -1230,6 +1236,7 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Str",
         "Not",
         "IsDefined",
+        "IsUndefined",
         "Map",
         "HasMatchingSublist",
         "Strptime",

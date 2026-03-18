@@ -11,8 +11,12 @@ from mathjson_solver import create_solver
 @pytest.mark.parametrize(
     "parameters, expression, expected_result",
     [
-        # ({"a": 12}, ["IsDefined", "a"], True),
+        ({"a": 12}, ["IsDefined", "a"], True),
         ({"a": 12}, ["IsDefined", "b"], False),
+        ({}, ["Constants", ["x", 5], ["IsDefined", "x"]], True),
+        ({"a": 12}, ["IsUndefined", "a"], False),
+        ({"a": 12}, ["IsUndefined", "b"], True),
+        ({}, ["Constants", ["x", 5], ["IsUndefined", "x"]], False),
         ({}, ["Abs", -3.5], 3.5),
         ({}, ["Round", -5.123456, 2], -5.12),
         ({}, ["Round", -5.123456, 0], -5),
@@ -21,6 +25,18 @@ from mathjson_solver import create_solver
         ({}, ["Constants", ["a", 1], ["b", 2], "a"], 1),
         ({}, ["Constants", ["a", 1], ["b", 2], ["c", 100], ["Sum", "a", "b"]], 3),
         ({}, ["Constants", ["a", 1], ["b", ["Add", 2, "a"]], "b"], 3),
+        # Constants null-propagation: uncomputable constant becomes None,
+        # allowing If to select the computable branch.
+        (
+            {"x": 10},
+            ["Constants", ["good", "x"], ["bad", ["Divide", "missing", 2]], ["If", [["Greater", "good", 0], "good"], "bad"]],
+            10,
+        ),
+        (
+            {"x": 10},
+            ["Constants", ["bad", ["Divide", "missing", 2]], ["good", "x"], ["If", [["Greater", "good", 0], "good"], "bad"]],
+            10,
+        ),
         ({"x": 1}, ["Add", 2, "x"], 3),
         ({"value": 1}, ["Switch", "value", 0, [1, 11], [2, 22]], 11),
         ({"value": 3}, ["Switch", "value", 0, [1, 11], [2, 22]], 0),
