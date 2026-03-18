@@ -327,7 +327,7 @@ If a constant definition raises an exception (e.g. because a referenced paramete
 # Result: 11.25  (c_old was never needed)
 ```
 
-A constant that failed to compute can be detected with `["Equal", "c_old", None]`.
+A constant that failed to compute resolves to `None`, which is falsy. Use `["IsFalse", "c_old"]` to detect it (or `["IsTrue", "c_old"]` to confirm it computed successfully).
 
 ### If Statement
 ```
@@ -824,7 +824,7 @@ The logical complement of `IsDefined`. Returns `True` if the name is not defined
 ["Constants", ["x", 5], ["IsUndefined", "y"]]   # True
 ```
 
-Note: when a `Constants` definition raises an exception, that constant is set to `None` (see null-propagation below). In that case `IsUndefined` still returns `False` — the name is defined, just with a `None` value. Use `["Equal", "val", None]` to test for that explicitly.
+Note: when a `Constants` definition raises an exception, that constant is set to `None` (see null-propagation below). In that case `IsUndefined` still returns `False` — the name is defined, just with a `None` value. Use `["IsFalse", "val"]` to detect a failed constant (since `None` is falsy).
 
 ---
 
