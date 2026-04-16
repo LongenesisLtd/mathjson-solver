@@ -617,6 +617,8 @@ def create_mathjson_solver(solver_parameters):
 
             def Strftime(s):
                 dt = _try_parse_datetime(f(s[1], c))
+                if not isinstance(dt, (datetime.datetime, datetime.date)):
+                    raise ValueError(f"Strftime: could not parse input as datetime: {dt!r}")
                 parameters = f(s[2], c)
                 return dt.strftime(parameters)
 

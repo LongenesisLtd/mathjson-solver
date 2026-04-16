@@ -134,6 +134,20 @@ class TestStrftime:
         result = solver(["Strftime", "2025-06-15T14:30:45", "%Y-%m-%d %H:%M:%S"])
         assert result == "2025-06-15 14:30:45"
 
+    def test_strftime_raises_on_unparseable_input(self):
+        """Strftime must raise MathJSONException (not AttributeError) for unparseable input."""
+        from mathjson_solver import MathJSONException
+        solver = create_solver({})
+        with pytest.raises(MathJSONException):
+            solver(["Strftime", "not-a-date", "%Y-%m-%d"])
+
+    def test_strftime_raises_on_none_input(self):
+        """Strftime must raise MathJSONException when input resolves to None."""
+        from mathjson_solver import MathJSONException
+        solver = create_solver({})
+        with pytest.raises(MathJSONException):
+            solver(["Strftime", None, "%Y-%m-%d"])
+
 
 class TestDatetimeChaining:
     """Test complex datetime operation chains."""
