@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mathjson-solver"
-version = "1.20.0"
+version = "1.20.1"
 authors = [{name = "Martins Mednis", email = "mrt@mednis.info"}]
 description = "Utilities for MathJSON evaluation"
 readme = "README.md"
