@@ -15,6 +15,7 @@ from mathjson_solver import extract_variables
         ({"a": 5}, ["Sum", 2, "a", 3], set()),
         ({"a": 5, "b": 6}, ["Sum", 2, "a", "c"], set(["c"])),
         ({}, ["Constants", ["c", 1], ["d", ["Add", 2, "a"]], "d"], set(["a"])),
+        ({}, ["Constants", ["c", 1], ["b", ["Add", 2, "a"]], "d"], set(["a", "d"])),
         # Now with "ugly" variables that mimic the ones used for deep referencing.
         (
             {},
