@@ -1235,11 +1235,18 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "ContainsNoneOf",
         "Int",
         "Float",
+        "Floor",
+        "Ceil",
         "Str",
         "Not",
         "IsDefined",
         "IsUndefined",
+        "StrictEqual",
+        "NotEqual",
+        "StrictSwitch",
         "Map",
+        "StrictMap",
+        "Filter",
         "HasMatchingSublist",
         "Strptime",
         "Strftime",
@@ -1261,10 +1268,13 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "AtIndex",
         "Slice",
         "CumulativeProduct",
+        "CumulativeSum",
         "Interp",
         "FindIntervalIndex",
         "TrapezoidalIntegrate",
         "TrapezoidalIntegrate",
+        "Reduce",
+        "Appended",
         "Sin",
         "Cos",
         "Tan",
@@ -1284,7 +1294,7 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
             for x in s[1:-1]:
                 ignore_list.add(x[0])
                 li.update(extract_variables(x[1], li, ignore_list))
-            li.update(extract_variables(x[-1], li, ignore_list))
+            li.update(extract_variables(s[-1], li, ignore_list))
         elif s[0] == "If":
             for elif_block in s[1:-1]:  # s[1] is list
                 for x in elif_block:
