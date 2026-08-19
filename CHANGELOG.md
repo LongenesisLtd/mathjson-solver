@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-08-19
+
+### Fixed
+
+- Fixed packaging: the sdist now only includes the intended package, tests, docs, and metadata files.
+
+[2.1.1]: https://github.com/LongenesisLtd/mathjson-solver/compare/v2.1.0...v2.1.1
+
 ## [2.1.0] - 2026-08-19
 
 Continues the CortexJS compatibility pass: `If`, `Map`, `Filter`, and `Reduce` now also accept CortexJS calling conventions, alongside the existing Python-specific forms.

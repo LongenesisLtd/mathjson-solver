@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Scratch space for working notes; never intended for the published package
+untracked/
+
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json
