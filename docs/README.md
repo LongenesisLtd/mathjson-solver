@@ -153,11 +153,22 @@ Division by zero raises a `MathJSONException`:
 
 ### Exponents and Logarithms
 
+`Log` matches [CortexJS](https://cortexjs.io/compute-engine/): with one argument it is log base 10; with a second argument it is log of that arbitrary base. For natural log, use `Ln`.
+
+> **Breaking change (2.0.0):** `["Log", x]` previously meant natural log. If you relied on that, switch to `["Ln", x]`.
+
+`Lb` and `Lg` are CortexJS aliases for `Log2` and `Log10` respectively. `LogOnePlus` is `ln(x + 1)`, computed with `math.log1p` for numerical stability near zero.
+
 ```python
 ["Exp", 2]                        # e^2≅7.389
-["Log", 2.7183]                   # ln(2.7183)≅1.0000
+["Log", 1000]                     # log10(1000)=3.0
+["Log", 8, 2]                     # log base 2 of 8 = 3.0
+["Ln", 2.7183]                    # ln(2.7183)≅1.0000
 ["Log2", 8]                       # log2(8)=3.0
 ["Log10", 1000]                   # log10(1000)=3.0
+["Lb", 8]                         # log2(8)=3.0
+["Lg", 1000]                      # log10(1000)=3.0
+["LogOnePlus", 0]                 # ln(1+0)=0.0
 ```
 
 ### Absolute Value
@@ -202,6 +213,28 @@ Returns the smallest integer greater than or equal to the given number.
 ```python
 ["Pi"]                            # 3.141592653589793
 ["Multiply", 2, ["Pi"]]           # 2π ≈ 6.283
+["Degrees"]                       # π/180 ≈ 0.01745 (multiply degrees by this to get radians)
+["ExponentialE"]                  # e ≈ 2.71828
+["GoldenRatio"]                   # φ ≈ 1.61803
+```
+
+### Number Theory and Special Functions
+
+```python
+["Chop", 1e-12]                   # 0 (values with |x| < 1e-10 collapse to 0)
+["Chop", 5]                       # 5
+["Mod", 7, 3]                     # 1
+["Mod", -7, 3]                    # 2 (Euclidean modulus, sign matches divisor)
+["Clamp", 5, 0, 3]                # 3 (bounds value between lower and upper, default -1..1)
+["Clamp", -5, 0, 3]               # 0
+["GCD", 12, 18]                   # 6
+["LCM", 4, 6]                     # 12
+["Factorial", 5]                  # 120
+["Binomial", 5, 2]                # 10 (5 choose 2)
+["IsPrime", 7]                    # True
+["IsPrime", 8]                    # False
+["Erf", 1]                        # 0.8427... (error function)
+["Erfc", 1]                       # 0.1573... (complementary error function)
 ```
 
 ---
@@ -387,6 +420,8 @@ Example:
 
 The expression in this example will make solver to look for a constant (or a parameter) with the name "color". If "color" is "red", expression evaluates to 10, if "blue" - to 20, if "green" - to 30. Otherwise to 100. Please note that "color" here is a valid expression that evaluates to the actual value of "color" whether it is a parameter or constant.
 
+`Which` is the CortexJS name for `Switch` and takes exactly the same arguments.
+
 ---
 
 ## Arrays and Aggregation
@@ -416,21 +451,23 @@ print(answer)
 
 ### Statistical Functions
 
-#### Average
-`Average` internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver.
+#### Average (alias: Mean)
+`Average` internally tries to convert strings to numbers, making calculation of average from `[2, 4 ,"6"]` actually possible. Also, it ignores un-convertible elements so arrays like `[2, "three", 4 ,"6"]` don't crash the solver. `Mean` is the CortexJS name for the same function.
 
 ```python
 ["Average", ["Array", 1, 2, 3, 5, 2]]         # 2.6
 ["Average", ["Array", 2, "three", 4 ,"6"]]    # Average of [2, 4, 6] == 4,  element "three" is ignored
 ["Average", ["Array"]]                        # None
+["Mean", ["Array", 2, 4, 6]]                  # 4
 ```
 
 #### Max
-Returns the maximum value from an array. Only considers numeric values and ignores non-numeric elements.
+Returns the maximum value from an array, or, in variadic (CortexJS) form, the maximum of the given arguments directly. Only considers numeric values and ignores non-numeric elements.
 
 ```python
 ["Max", ["Array", 1, 2, 3, 5, 2]] # 5
 ["Max", ["Array", 1, 2, ["Sum", 2, 4, 3], 5, 2]]  # 9
+["Max", 5, 2, -1]                 # 5 (variadic form)
 ```
 
 Max can also work with parameter references:
@@ -441,11 +478,12 @@ Max can also work with parameter references:
 ```
 
 #### Min
-Returns the minimum value from an array. Only considers numeric values and ignores non-numeric elements.
+Returns the minimum value from an array, or, in variadic (CortexJS) form, the minimum of the given arguments directly. Only considers numeric values and ignores non-numeric elements.
 
 ```python
 ["Min", ["Array", 1, 2, 3, 5, 2]] # 1
 ["Min", ["Array", 2, 1, 3, 5, 2]] # 1
+["Min", 5, 2, -1]                 # -1 (variadic form)
 ```
 
 Min can also work with parameter references:
@@ -469,13 +507,22 @@ Median can also work with parameter references:
 ["Median", "a"]                   # 2
 ```
 
-#### Length
-Returns the number of elements in an array, including non-numeric elements like `None`.
+#### Variance and StandardDeviation
+Returns the (sample) variance and standard deviation of an array's numeric elements.
+
+```python
+["Round", ["Variance", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3]           # 4.571
+["Round", ["StandardDeviation", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3]  # 2.138
+```
+
+#### Length (alias: Count)
+Returns the number of elements in an array, including non-numeric elements like `None`. `Count` is the CortexJS name for the same function.
 
 ```python
 ["Length", ["Array", 1, 2, 3, 5, 2, 9]]           # 6
 ["Length", ["Array"]]                             # 0
 ["Length", ["Array", 1, 2, 3, None]]              # 4
+["Count", ["Array", 1, 2, 3]]                     # 3
 ```
 
 Length can also work with parameter references:
@@ -486,6 +533,75 @@ Length can also work with parameter references:
 ```
 
 ### Array Manipulation Functions
+
+#### List
+CortexJS name for creating an array; behaves the same as `Array`.
+
+```python
+["List", 1, 2, 3]                                 # ["Array", 1, 2, 3]
+```
+
+#### First, Last, Rest, Most
+Access or trim the ends of an array.
+
+```python
+["First", ["Array", 1, 2, 3]]                     # 1
+["Last", ["Array", 1, 2, 3]]                       # 3
+["Rest", ["Array", 1, 2, 3]]                       # ["Array", 2, 3] (all but the first)
+["Most", ["Array", 1, 2, 3]]                       # ["Array", 1, 2] (all but the last)
+```
+
+#### Reverse and Sort
+
+```python
+["Reverse", ["Array", 1, 2, 3]]                    # ["Array", 3, 2, 1]
+["Sort", ["Array", 3, 1, 2]]                        # ["Array", 1, 2, 3]
+```
+
+#### IsEmpty
+
+```python
+["IsEmpty", ["Array"]]                             # True
+["IsEmpty", ["Array", 1]]                          # False
+```
+
+#### Unique
+Removes duplicates, preserving the order of first occurrence.
+
+```python
+["Unique", ["Array", 1, 2, 2, 3, 1]]               # ["Array", 1, 2, 3]
+```
+
+#### Join
+Concatenates two or more arrays.
+
+```python
+["Join", ["Array", 1, 2], ["Array", 3, 4]]         # ["Array", 1, 2, 3, 4]
+```
+
+#### Zip
+Pairs up elements from two or more arrays by position.
+
+```python
+["Zip", ["Array", 1, 2], ["Array", "a", "b"]]      # ["Array", ["Array", 1, "a"], ["Array", 2, "b"]]
+```
+
+#### At
+1-indexed element access (CortexJS convention), with negative indexes counting from the end. Compare to `AtIndex`, which is 0-indexed.
+
+```python
+["At", ["Array", 10, 20, 30], 1]                   # 10
+["At", ["Array", 10, 20, 30], -1]                  # 30
+```
+
+#### Range
+CortexJS-compatible range generator: 1 to `upper` inclusive by default, or `lower` to `upper` inclusive with an optional `step`. Compare to `GenerateRange`, which is 0-indexed and exclusive at the upper end.
+
+```python
+["Range", 5]                                       # ["Array", 1, 2, 3, 4, 5]
+["Range", 2, 5]                                     # ["Array", 2, 3, 4, 5]
+["Range", 1, 10, 2]                                 # ["Array", 1, 3, 5, 7, 9]
+```
 
 #### GenerateRange
 Generates an array of sequential numbers starting from 0 or a specified start value.
@@ -683,6 +799,22 @@ Returns `True` if any condition is truthy, `False` if all are falsy. Supports mu
 ["Or", 0, 0, 1]                   # True (at least one truthy)
 ["Or", 0, "", False]              # False (all falsy)
 ["Or", ["Greater", 5, 3], ["Greater", 2, 4]]  # True
+```
+
+#### Xor, Nand, Nor, Implies, Equivalent
+Two-argument (`Xor`, `Implies`, `Equivalent`) and variadic (`Nand`, `Nor`) logical connectives.
+
+```python
+["Xor", True, False]              # True (exclusive or)
+["Xor", True, True]               # False
+["Nand", True, True]              # False (not all truthy)
+["Nand", True, False]             # True
+["Nor", False, False]             # True (not any truthy)
+["Nor", True, False]              # False
+["Implies", True, False]          # False (p → q ≡ ¬p ∨ q)
+["Implies", False, False]         # True
+["Equivalent", True, True]        # True (p ↔ q)
+["Equivalent", True, False]       # False
 ```
 
 ### Set Operations
@@ -979,6 +1111,49 @@ Computes the arctangent (inverse tangent) of a value, returning result in radian
 ["Arctan", 1]                     # π/4 ≈ 0.7854
 ```
 
+#### Arctan2
+Two-argument arctangent, `atan2(y, x)`, which correctly determines the quadrant of the result.
+
+```python
+["Arctan2", 1, 1]                 # π/4 ≈ 0.7854
+["Arctan2", 1, -1]                # 3π/4 ≈ 2.3562
+```
+
+### Reciprocal Trigonometric Functions
+
+```python
+["Cot", ["Divide", ["Pi"], 4]]    # cot(π/4) ≈ 1.0
+["Sec", 0]                        # sec(0) = 1.0
+["Csc", ["Divide", ["Pi"], 2]]    # csc(π/2) = 1.0
+["Arccot", 1]                     # π/4 ≈ 0.7854
+["Arcsec", 1]                     # 0.0
+["Arccsc", 1]                     # π/2 ≈ 1.5708
+```
+
+### Hyperbolic Functions
+
+```python
+["Sinh", 0]                       # 0.0
+["Cosh", 0]                       # 1.0
+["Tanh", 0]                       # 0.0
+["Coth", 1]                       # coth(1) ≈ 1.3130
+["Sech", 0]                       # 1.0
+["Csch", 1]                       # csch(1) ≈ 0.8509
+["Arsinh", 0]                     # 0.0
+["Arcosh", 1]                     # 0.0
+["Artanh", 0]                     # 0.0
+["Arcoth", 2]                     # arcoth(2) ≈ 0.5493
+["Arsech", 1]                     # 0.0
+["Arcsch", 1]                     # arcsch(1) ≈ 0.8814
+```
+
+### Other
+
+```python
+["Hypot", 3, 4]                   # 5.0 (Euclidean distance / hypotenuse)
+["Sinc", 0]                       # 1.0 (sin(x)/x, defined as 1 at x=0)
+```
+
 ---
 
 ## Advanced Functions
@@ -1150,13 +1325,20 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Root](#root-and-square-root) - nth root
 - [Sqrt](#root-and-square-root) - Square root
 - [Exp](#exponents-and-logarithms) - Exponential (eˣ)
-- [Log](#exponents-and-logarithms) - Natural logarithm
-- [Log2](#exponents-and-logarithms) - Base-2 logarithm
-- [Log10](#exponents-and-logarithms) - Base-10 logarithm
+- [Log](#exponents-and-logarithms) - Base-10 logarithm, or base-`b` with a 2nd argument
+- [Log2 / Lb](#exponents-and-logarithms) - Base-2 logarithm
+- [Log10 / Lg](#exponents-and-logarithms) - Base-10 logarithm
+- [Ln](#exponents-and-logarithms) - Natural logarithm
+- [LogOnePlus](#exponents-and-logarithms) - ln(x + 1)
 - [Abs](#absolute-value) - Absolute value
 - [Round](#rounding) - Rounding
 - [Floor](#floor-and-ceiling) - Floor function
 - [Ceil](#floor-and-ceiling) - Ceiling function
+- [Chop, Mod, Clamp](#number-theory-and-special-functions) - Zero snapping, Euclidean modulus, bounding
+- [GCD, LCM](#number-theory-and-special-functions) - Greatest common divisor, least common multiple
+- [Factorial, Binomial](#number-theory-and-special-functions) - Factorial, binomial coefficient
+- [IsPrime](#number-theory-and-special-functions) - Primality test
+- [Erf, Erfc](#number-theory-and-special-functions) - Error function and its complement
 
 ### Comparison Operations
 - [Equal](#equality) - Flexible equality (bool/int aware)
@@ -1172,17 +1354,26 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 ### Control Flow
 - [Constants](#constants) - Define constants
 - [If](#if-statement) - Conditional statements
-- [Switch](#switch-case-statement) - Switch-case statements
+- [Switch / Which](#switch-case-statement) - Switch-case statements
 
 ### Arrays and Aggregation
-- [Array](#array) - Array creation and manipulation
-- [Average](#average) - Calculate average
-- [Max](#max) - Maximum value
-- [Min](#min) - Minimum value
+- [Array / List](#array) - Array creation and manipulation
+- [Average / Mean](#average-alias-mean) - Calculate average
+- [Max](#max) - Maximum value (list or variadic)
+- [Min](#min) - Minimum value (list or variadic)
 - [Median](#median) - Median value
-- [Length](#length) - Array length
-- [GenerateRange](#generaterange) - Generate sequential number arrays
-- [AtIndex](#atindex) - Get element at specific index
+- [Variance, StandardDeviation](#variance-and-standarddeviation) - Dispersion statistics
+- [Length / Count](#length-alias-count) - Array length
+- [First, Last, Rest, Most](#first-last-rest-most) - Access or trim array ends
+- [Reverse, Sort](#reverse-and-sort) - Reverse or sort an array
+- [IsEmpty](#isempty) - Check if array is empty
+- [Unique](#unique) - Remove duplicates
+- [Join](#join) - Concatenate arrays
+- [Zip](#zip) - Pair up elements from arrays
+- [At](#at) - 1-indexed element access
+- [Range](#range) - CortexJS-compatible range generator
+- [GenerateRange](#generaterange) - Generate sequential number arrays (0-indexed)
+- [AtIndex](#atindex) - Get element at specific index (0-indexed)
 - [Slice](#slice) - Extract array portion
 - [CumulativeProduct](#cumulativeproduct) - Cumulative product calculation
 - [CumulativeSum](#cumulativesum) - Cumulative sum calculation
@@ -1195,6 +1386,7 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Not](#not) - Logical negation
 - [And](#and) - Logical AND operation
 - [Or](#or) - Logical OR operation
+- [Xor, Nand, Nor, Implies, Equivalent](#xor-nand-nor-implies-equivalent) - Other logical connectives
 - [In](#in) - Check membership
 - [Not_in / NotIn](#not_in--notin) - Check non-membership
 - [Contains_any_of / ContainsAnyOf](#contains_any_of--containsanyof) - Check overlap
@@ -1225,7 +1417,14 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Arcsin](#arcsin) - Arcsine
 - [Arccos](#arccos) - Arccosine
 - [Arctan](#arctan) - Arctangent
-- [Pi](#constants) - Pi constant
+- [Arctan2](#arctan2) - Two-argument arctangent
+- [Cot, Sec, Csc](#reciprocal-trigonometric-functions) - Reciprocal trig functions
+- [Arccot, Arcsec, Arccsc](#reciprocal-trigonometric-functions) - Inverse reciprocal trig functions
+- [Sinh, Cosh, Tanh, Coth, Sech, Csch](#hyperbolic-functions) - Hyperbolic functions
+- [Arsinh, Arcosh, Artanh, Arcoth, Arsech, Arcsch](#hyperbolic-functions) - Area hyperbolic (inverse) functions
+- [Hypot](#other) - Euclidean distance / hypotenuse
+- [Sinc](#other) - Sinc function
+- [Pi, Degrees, ExponentialE, GoldenRatio](#constants) - Constants
 
 ### Advanced Functions
 - [Map](#map) - Apply function to array elements

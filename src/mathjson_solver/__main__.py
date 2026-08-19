@@ -3,7 +3,7 @@ from typing import Union, Any
 from functools import reduce
 import math
 from copy import deepcopy
-from statistics import median
+from statistics import median, variance, stdev
 import datetime
 
 NUMPY_AVAILABLE = False
@@ -183,6 +183,17 @@ def is_numeric(x):
         return False
     else:
         return True
+
+
+def _is_prime(n) -> bool:
+    n = int(n)
+    if n < 2:
+        return False
+    if n == 2:
+        return True
+    if n % 2 == 0:
+        return False
+    return all(n % i for i in range(3, int(n**0.5) + 1, 2))
 
 
 def has_matching_sublist(
@@ -367,16 +378,34 @@ def create_mathjson_solver(solver_parameters):
                 return result
 
             def Max(s):
-                if isinstance(s[1], str):
-                    return max([f(x, c) for x in f(s[1], c) if is_numeric(f(x, c))])
+                args = s[1:]
+                if len(args) == 1:
+                    if isinstance(args[0], str):
+                        return max(
+                            [f(x, c) for x in f(args[0], c) if is_numeric(f(x, c))]
+                        )
+                    else:
+                        return max(
+                            [f(x, c) for x in args[0][1:] if is_numeric(f(x, c))]
+                        )
                 else:
-                    return max([f(x, c) for x in s[1][1:] if is_numeric(f(x, c))])
+                    # CortexJS-style variadic form: ["Max", a, b, c, ...]
+                    return max([f(x, c) for x in args])
 
             def Min(s):
-                if isinstance(s[1], str):
-                    return min([f(x, c) for x in f(s[1], c) if is_numeric(f(x, c))])
+                args = s[1:]
+                if len(args) == 1:
+                    if isinstance(args[0], str):
+                        return min(
+                            [f(x, c) for x in f(args[0], c) if is_numeric(f(x, c))]
+                        )
+                    else:
+                        return min(
+                            [f(x, c) for x in args[0][1:] if is_numeric(f(x, c))]
+                        )
                 else:
-                    return min([f(x, c) for x in s[1][1:] if is_numeric(f(x, c))])
+                    # CortexJS-style variadic form: ["Min", a, b, c, ...]
+                    return min([f(x, c) for x in args])
 
             def Average(s):
                 if isinstance(s[1], str):
@@ -400,6 +429,117 @@ def create_mathjson_solver(solver_parameters):
                     return len([x for x in f(s[1], c)][1:])
                 else:
                     return len([x for x in s[1][1:]])
+
+            def Clamp(s):
+                """
+                ["Clamp", value] or ["Clamp", value, lower, upper]
+                Bounds `value` between `lower` (default -1) and `upper` (default 1),
+                matching CortexJS `Clamp`.
+                """
+                value = f(s[1], c)
+                lower = f(s[2], c) if len(s) > 2 else -1
+                upper = f(s[3], c) if len(s) > 3 else 1
+                return max(lower, min(upper, value))
+
+            def _arr_vals(s):
+                lst = f(s[1], c)
+                if not (isinstance(lst, list) and lst[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                return [f(x, c) for x in lst[1:]]
+
+            def First(s):
+                return _arr_vals(s)[0]
+
+            def Last(s):
+                return _arr_vals(s)[-1]
+
+            def Rest(s):
+                return ["Array"] + _arr_vals(s)[1:]
+
+            def Most(s):
+                return ["Array"] + _arr_vals(s)[:-1]
+
+            def Reverse(s):
+                return ["Array"] + list(reversed(_arr_vals(s)))
+
+            def Sort(s):
+                return ["Array"] + sorted(_arr_vals(s))
+
+            def IsEmpty(s):
+                lst = f(s[1], c)
+                if not (isinstance(lst, list) and lst[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                return len(lst) <= 1
+
+            def Range(s):
+                """
+                CortexJS-compatible `Range`:
+                ["Range", upper]                -> 1..upper (inclusive)
+                ["Range", lower, upper]         -> lower..upper (inclusive)
+                ["Range", lower, upper, step]   -> lower..upper (inclusive), stepped
+                Distinct from `GenerateRange`, which is 0-indexed and exclusive at
+                the upper end.
+                """
+                if len(s) == 2:
+                    return ["Array"] + list(range(1, int(f(s[1], c)) + 1))
+                elif len(s) == 3:
+                    lo, hi = int(f(s[1], c)), int(f(s[2], c))
+                    return ["Array"] + list(range(lo, hi + 1))
+                else:
+                    lo, hi, step = (
+                        int(f(s[1], c)),
+                        int(f(s[2], c)),
+                        int(f(s[3], c)),
+                    )
+                    return ["Array"] + list(
+                        range(lo, hi + 1 if step > 0 else hi - 1, step)
+                    )
+
+            def Join(s):
+                """
+                ["Join", array1, array2, ...]
+                Concatenates the given arrays.
+                """
+                result = ["Array"]
+                for arg in s[1:]:
+                    lst = f(arg, c)
+                    if not (isinstance(lst, list) and lst[0] == "Array"):
+                        raise ValueError("All parameters must be arrays.")
+                    result += [f(x, c) for x in lst[1:]]
+                return result
+
+            def Unique(s):
+                seen = []
+                for x in _arr_vals(s):
+                    if x not in seen:
+                        seen.append(x)
+                return ["Array"] + seen
+
+            def Zip(s):
+                lists = [[f(x, c) for x in f(arg, c)[1:]] for arg in s[1:]]
+                return ["Array"] + [["Array", a, b] for a, b in zip(*lists)]
+
+            def At(s):
+                """
+                ["At", array, index]
+                1-indexed element access (CortexJS `At`), with negative indexes
+                counting from the end.
+                """
+                vals = _arr_vals(s)
+                idx = int(f(s[2], c))
+                if idx > 0:
+                    return vals[idx - 1]
+                else:
+                    return vals[idx]
+
+            def IsPrime(s):
+                return _is_prime(f(s[1], c))
+
+            def Variance(s):
+                return variance(_arr_vals(s))
+
+            def StandardDeviation(s):
+                return stdev(_arr_vals(s))
 
             def Any(s):
                 evaluated = f(s[1], c)
@@ -1054,10 +1194,20 @@ def create_mathjson_solver(solver_parameters):
                 "Sqrt": lambda s: pow(f(s[1], c), 1.0 / 2),
                 "Square": lambda s: pow(f(s[1], c), 2),
                 "Exp": lambda s: math.exp(f(s[1], c)),
-                "Log": lambda s: math.log(f(s[1], c)),
+                # CortexJS-compatible: ["Log", x] is log base 10; ["Log", x, b] is
+                # log base b. Use "Ln" for natural log. (BREAKING as of 2.0.0 -
+                # "Log" previously meant natural log.)
+                "Log": lambda s: (
+                    math.log10(f(s[1], c))
+                    if len(s) == 2
+                    else math.log(f(s[1], c), f(s[2], c))
+                ),
                 "Log2": lambda s: math.log2(f(s[1], c)),
                 "Log10": lambda s: math.log10(f(s[1], c)),
                 "Ln": lambda s: math.log(f(s[1], c)),
+                "Lb": lambda s: math.log2(f(s[1], c)),  # CortexJS name for Log2
+                "Lg": lambda s: math.log10(f(s[1], c)),  # CortexJS name for Log10
+                "LogOnePlus": lambda s: math.log1p(f(s[1], c)),
                 # "Equal": lambda s: f"{f(s[1], c)}" == f"{f(s[2], c)}",
                 "Equal": lambda s: comparison_safe_converter(f(s[1], c))
                 == comparison_safe_converter(f(s[2], c)),
@@ -1086,11 +1236,14 @@ def create_mathjson_solver(solver_parameters):
                 "Max": Max,
                 "Min": Min,
                 "Average": Average,
+                "Mean": Average,  # CortexJS name for Average
                 "Median": Median,
                 "Length": Length,
+                "Count": Length,  # CortexJS name for Length
                 "Any": Any,
                 "All": All,
                 "Array": Arr,
+                "List": lambda s: ["Array"] + [f(x, c) for x in s[1:]],  # CortexJS name for Array
                 "In": In,
                 "Not_in": Not_in,
                 "Contains_any_of": Contains_any_of,
@@ -1145,7 +1298,69 @@ def create_mathjson_solver(solver_parameters):
                 "Arcsin": Arcsin,
                 "Arccos": Arccos,
                 "Arctan": Arctan,
+                "Arctan2": lambda s: math.atan2(f(s[1], c), f(s[2], c)),
                 "Pi": Pi,
+                "Which": Switch,  # CortexJS name for Switch
+                # --- Trigonometric: reciprocal, hyperbolic, area-hyperbolic ---
+                "Cot": lambda s: 1 / math.tan(f(s[1], c)),
+                "Sec": lambda s: 1 / math.cos(f(s[1], c)),
+                "Csc": lambda s: 1 / math.sin(f(s[1], c)),
+                "Arccot": lambda s: math.atan(1 / f(s[1], c)),
+                "Arcsec": lambda s: math.acos(1 / f(s[1], c)),
+                "Arccsc": lambda s: math.asin(1 / f(s[1], c)),
+                "Sinh": lambda s: math.sinh(f(s[1], c)),
+                "Cosh": lambda s: math.cosh(f(s[1], c)),
+                "Tanh": lambda s: math.tanh(f(s[1], c)),
+                "Coth": lambda s: 1 / math.tanh(f(s[1], c)),
+                "Sech": lambda s: 1 / math.cosh(f(s[1], c)),
+                "Csch": lambda s: 1 / math.sinh(f(s[1], c)),
+                "Arsinh": lambda s: math.asinh(f(s[1], c)),
+                "Arcosh": lambda s: math.acosh(f(s[1], c)),
+                "Artanh": lambda s: math.atanh(f(s[1], c)),
+                "Arcoth": lambda s: math.atanh(1 / f(s[1], c)),
+                "Arsech": lambda s: math.acosh(1 / f(s[1], c)),
+                "Arcsch": lambda s: math.asinh(1 / f(s[1], c)),
+                "Hypot": lambda s: math.hypot(f(s[1], c), f(s[2], c)),
+                "Sinc": lambda s: (
+                    1.0 if f(s[1], c) == 0 else math.sin(f(s[1], c)) / f(s[1], c)
+                ),
+                # --- Constants ---
+                "Degrees": lambda s: math.pi / 180,
+                "ExponentialE": lambda s: math.e,
+                "GoldenRatio": lambda s: (1 + math.sqrt(5)) / 2,
+                # --- Number theory / special functions ---
+                "Chop": lambda s: 0 if abs(f(s[1], c)) < 1e-10 else f(s[1], c),
+                "Mod": lambda s: f(s[1], c) % f(s[2], c),
+                "Clamp": Clamp,
+                "GCD": lambda s: math.gcd(int(f(s[1], c)), int(f(s[2], c))),
+                "LCM": lambda s: math.lcm(int(f(s[1], c)), int(f(s[2], c))),
+                "Factorial": lambda s: math.factorial(int(f(s[1], c))),
+                "Binomial": lambda s: math.comb(int(f(s[1], c)), int(f(s[2], c))),
+                "IsPrime": IsPrime,
+                "Erf": lambda s: math.erf(f(s[1], c)),
+                "Erfc": lambda s: math.erfc(f(s[1], c)),
+                # --- Boolean logic ---
+                "Xor": lambda s: bool(f(s[1], c)) ^ bool(f(s[2], c)),
+                "Nand": lambda s: not all(f(x, c) for x in s[1:]),
+                "Nor": lambda s: not any(f(x, c) for x in s[1:]),
+                "Implies": lambda s: (not f(s[1], c)) or bool(f(s[2], c)),
+                "Equivalent": lambda s: bool(f(s[1], c)) == bool(f(s[2], c)),
+                # --- Statistics ---
+                "Variance": Variance,
+                "StandardDeviation": StandardDeviation,
+                # --- Collections ---
+                "First": First,
+                "Last": Last,
+                "Rest": Rest,
+                "Most": Most,
+                "Reverse": Reverse,
+                "Sort": Sort,
+                "IsEmpty": IsEmpty,
+                "Range": Range,
+                "Join": Join,
+                "Unique": Unique,
+                "Zip": Zip,
+                "At": At,
             }
             if not s:
                 # Empty equation given - []
@@ -1281,7 +1496,67 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Arcsin",
         "Arccos",
         "Arctan",
+        "Arctan2",
         "Pi",
+        "Which",
+        "Lb",
+        "Lg",
+        "LogOnePlus",
+        "Mean",
+        "Count",
+        "List",
+        "Cot",
+        "Sec",
+        "Csc",
+        "Arccot",
+        "Arcsec",
+        "Arccsc",
+        "Sinh",
+        "Cosh",
+        "Tanh",
+        "Coth",
+        "Sech",
+        "Csch",
+        "Arsinh",
+        "Arcosh",
+        "Artanh",
+        "Arcoth",
+        "Arsech",
+        "Arcsch",
+        "Hypot",
+        "Sinc",
+        "Degrees",
+        "ExponentialE",
+        "GoldenRatio",
+        "Chop",
+        "Mod",
+        "Clamp",
+        "GCD",
+        "LCM",
+        "Factorial",
+        "Binomial",
+        "IsPrime",
+        "Erf",
+        "Erfc",
+        "Xor",
+        "Nand",
+        "Nor",
+        "Implies",
+        "Equivalent",
+        "Variance",
+        "StandardDeviation",
+        "First",
+        "Last",
+        "Rest",
+        "Most",
+        "Reverse",
+        "Sort",
+        "IsEmpty",
+        "Range",
+        "Join",
+        "Unique",
+        "Zip",
+        "At",
     ]
     if isinstance(s, str):
         if s in ignore_list:
