@@ -4,6 +4,8 @@
 [![PyPI Downloads](https://static.pepy.tech/badge/mathjson-solver/month)](https://pepy.tech/projects/mathjson-solver)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
+> **Heads up:** Version 2 introduces a few breaking changes (see [CHANGELOG.md](CHANGELOG.md)) as part of steering back towards greater compatibility with [CortexJS MathJSON](https://cortexjs.io/compute-engine/). If you need to stay on the old behavior, bugfix releases for the 1.x line continue on the [`1.x` branch](https://github.com/LongenesisLtd/mathjson-solver/tree/1.x).
+
 A reliable Python library for numerically evaluating mathematical expressions in MathJSON format. Perfect for applications that need to safely execute user-provided formulas, calculate dynamic equations, or process mathematical data.
 
 **What is MathJSON?** MathJSON represents mathematical expressions as JSON arrays, like `["Add", 1, 2, 3]` for 1+2+3. This format is safe, structured, and easy to generate programmatically.
@@ -67,19 +69,20 @@ solver(["Reduce", ["Array", 1, 2, 3, 4], 0, ["Add", "acc", "item"],
 The library supports a comprehensive set of mathematical operations:
 
 * **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round, Floor, Ceil
-* **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan
-* **Logarithms:** Log, Log2, Log10, Exp
+* **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan, Arctan2, Cot, Sec, Csc (+ inverses), Sinh, Cosh, Tanh, Coth, Sech, Csch (+ inverses), Hypot, Sinc
+* **Logarithms:** Log (base 10, or base b), Log2/Lb, Log10/Lg, Ln (natural log), LogOnePlus, Exp
 * **Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
-* **Logic & Sets:** Any, All, Not, And, Or, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
-* **Statistics:** Average, Max, Min, Median, Length
+* **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
+* **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Variance, StandardDeviation, Length/Count
 * **Functional Programming:** Map, Reduce, Filter
-* **Arrays:** Array creation, GenerateRange, AtIndex, Slice, Appended, CumulativeSum, CumulativeProduct
-* **Control Flow:** If statements, Switch-Case, Constants definition
+* **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended, First, Last, Rest, Most, Reverse, Sort, Unique, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct
+* **Control Flow:** If statements, Switch-Case/Which, Constants definition
 * **Type Conversion:** Int, Float, Str, IsDefined
 * **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
+* **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc
 * **Integration:** TrapezoidalIntegrate (requires numpy), Interp, FindIntervalIndex, Variable references
 * **Advanced:** HasMatchingSublist for pattern matching
-* **Constants:** Pi
+* **Constants:** Pi, Degrees, ExponentialE, GoldenRatio
 
 [View complete documentation with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
 
