@@ -605,6 +605,32 @@ def create_mathjson_solver(solver_parameters):
             def If(s):
                 if len(s) < 3:
                     raise ValueError("Wrong parameters for 'If'")
+
+                # Detect the CortexJS flat form: ["If", cond, then] or
+                # ["If", cond, then, else]. In the Python pair-form below,
+                # s[1] is always a [condition, value] pair whose first
+                # element (the condition) is itself a MathJSON construct
+                # call, e.g. ["Equal", 1, 0]. A CortexJS flat condition is
+                # either not a list at all, or is itself such a construct
+                # call (its own first element is a *known construct name*).
+                # Requiring a known name - rather than any string - keeps a
+                # Python-form condition that is a bare parameter reference,
+                # e.g. ["If", ["my_flag", "yes"], "no"], from being
+                # misdetected as CortexJS form.
+                is_cortexjs_form = not isinstance(s[1], list) or (
+                    bool(s[1]) and isinstance(s[1][0], str) and s[1][0] in constructs
+                )
+
+                if is_cortexjs_form:
+                    if len(s) not in (3, 4):
+                        raise ValueError("Wrong parameters for 'If'")
+                    if f(s[1], c):
+                        return f(s[2], c)
+                    elif len(s) == 4:
+                        return f(s[3], c)
+                    else:
+                        return None  # CortexJS: Nothing, no else and condition false
+
                 for x in s[1:-1]:
                     if len(x) != 2:
                         raise ValueError("Wrong if or elif in 'If'")
@@ -677,20 +703,56 @@ def create_mathjson_solver(solver_parameters):
             def Not(s):
                 return not f(s[1])
 
+            def _apply_fn(fn_expr, args):
+                """
+                Apply a "function" argument (as used by Map, Filter, and the
+                CortexJS form of Reduce) to positional `args`. Supports two
+                conventions:
+
+                - CortexJS `["Function", body, param1, param2, ...]`. If no
+                  parameter names are given, `args` are bound to the
+                  anonymous placeholders "_" (only when there is a single
+                  argument) and "_1", "_2", ... (always), for use inside
+                  `body`.
+                - The existing "call template" convention:
+                  `[function_name, ...]`, applied as
+                  `f([function_name] + args, c)`.
+                """
+                if isinstance(fn_expr, list) and fn_expr and fn_expr[0] == "Function":
+                    body = fn_expr[1]
+                    params = fn_expr[2:]
+                    local_c = dict(c)
+                    if params:
+                        for name, value in zip(params, args):
+                            local_c[name] = value
+                    else:
+                        if len(args) == 1:
+                            local_c["_"] = args[0]
+                        for i, value in enumerate(args, start=1):
+                            local_c[f"_{i}"] = value
+                    return f(body, local_c)
+                elif isinstance(fn_expr, list) and fn_expr:
+                    function_name = fn_expr[0]
+                    return f([function_name] + list(args), c)
+                else:
+                    raise ValueError(
+                        "Wrong function parameter: expected a call template "
+                        "(e.g. ['Square']) or a ['Function', body, ...] expression."
+                    )
+
             def Map(s):
                 """
                 ["Map", list, function, more parameters]
                 The `function` must accept at least one parameter. That is for the current loop element.
                 The `more parameters` are for any additional parameters that function might have.
+                `function` can also be a CortexJS ["Function", body, ...params] expression.
                 """
                 z = f(s[1], c)
                 if isinstance(z, list):
                     retlist = ["Array"]
                     for x in z[1:]:
                         try:
-                            the_function_name = s[2][0]
-                            ss = [the_function_name, x] + s[3:]
-                            retlist.append(f(ss, c))
+                            retlist.append(_apply_fn(s[2], [x] + s[3:]))
                         except MathJSONException:
                             retlist.append(x)
                     return retlist
@@ -700,14 +762,13 @@ def create_mathjson_solver(solver_parameters):
                 ["Map", list, function, more parameters]
                 The `function` must accept at least one parameter. That is for the current loop element.
                 The `more parameters` are for any additional parameters that function might have.
+                `function` can also be a CortexJS ["Function", body, ...params] expression.
                 """
                 z = f(s[1], c)
                 if isinstance(z, list):
                     retlist = ["Array"]
                     for x in z[1:]:
-                        the_function_name = s[2][0]
-                        ss = [the_function_name, x] + s[3:]
-                        retlist.append(f(ss, c))
+                        retlist.append(_apply_fn(s[2], [x] + s[3:]))
                     return retlist
 
             def Filter(s):
@@ -715,14 +776,13 @@ def create_mathjson_solver(solver_parameters):
                 ["Filter", list, function, more parameters]
                 The `function` must accept at least one parameter. That is for the current loop element.
                 The `more parameters` are for any additional parameters that function might have.
+                `function` can also be a CortexJS ["Function", body, ...params] expression.
                 """
                 z = f(s[1], c)
                 if isinstance(z, list):
                     retlist = ["Array"]
                     for x in z[1:]:
-                        the_function_name = s[2][0]
-                        ss = [the_function_name, x] + s[3:]
-                        if f(ss, c):
+                        if _apply_fn(s[2], [x] + s[3:]):
                             retlist.append(x)
                     return retlist
 
@@ -885,14 +945,17 @@ def create_mathjson_solver(solver_parameters):
 
             def Function(s):
                 """
-                ["Function", function_expression, parameters]
-                The `function_name` must be a callable function.
-                The `parameters` are the arguments to be passed to the function.
+                ["Function", body_expression, param_name1, param_name2, ...]
+                Defines a CortexJS-style lambda: `body_expression` is evaluated
+                with the given parameter names bound to whatever arguments it
+                is called with. `Function` expressions are meant to be passed
+                as the `function` argument of Map, Filter, and Reduce; if no
+                parameter names are given, the anonymous placeholders "_",
+                "_1", "_2", ... are used instead (see those functions).
+                Evaluating a ["Function", ...] expression outside of such a
+                context just returns it unevaluated.
                 """
-                function_expression = s[1]
-                arguments = s[2:]
-                return 0
-                # return f(function_expression, c) function_name(*parameters)
+                return s
 
             def MultiplyByScalar(s):
                 """
@@ -1135,8 +1198,42 @@ def create_mathjson_solver(solver_parameters):
 
             def Reduce(s):
                 """
+                Two calling conventions, disambiguated by argument count:
+
+                CortexJS form (3 or 4 arguments):
+                ["Reduce", list, function]
+                ["Reduce", list, function, initial_value]
+                `function` is applied as `function(accumulator, current_item)`
+                on each element; without `initial_value`, the first element
+                seeds the accumulator. `function` can be a call template
+                (e.g. ["Add"]) or a ["Function", body, ...params] expression
+                (see `_apply_fn`).
+
+                Original Python form (6 arguments):
                 ["Reduce", list, initial_value, function, str_name_of_accumulator, str_name_of_current, str_name_of_index]
                 """
+                if len(s) <= 4:
+                    the_list = f(s[1], c)
+                    if not (isinstance(the_list, list) and the_list[0] == "Array"):
+                        raise ValueError("Parameter 1 must be an array.")
+                    elements = the_list[1:]
+                    fn_expr = s[2]
+
+                    if len(s) == 4:
+                        accumulator = f(s[3], c)
+                        remaining = elements
+                    else:
+                        if not elements:
+                            raise ValueError(
+                                "'Reduce' on an empty collection requires an initial value."
+                            )
+                        accumulator = f(elements[0], c)
+                        remaining = elements[1:]
+
+                    for x in remaining:
+                        accumulator = _apply_fn(fn_expr, [accumulator, x])
+                    return accumulator
+
                 the_list = f(s[1], c)[1:]
                 initial_value = f(s[2], c)
                 function_expression = s[3]
@@ -1158,6 +1255,19 @@ def create_mathjson_solver(solver_parameters):
                     c[name_accumulator] = f(function_expression, c)
 
                 return c[name_accumulator]
+
+            def Product(s):
+                """
+                ["Product", array]
+                Multiplies together the numeric elements of `array`.
+                """
+                the_list = f(s[1], c)
+                if not (isinstance(the_list, list) and the_list[0] == "Array"):
+                    raise ValueError("Parameter 1 must be an array.")
+                result = 1
+                for x in the_list[1:]:
+                    result *= f(x, c)
+                return result
 
             def Appended(s):
                 """
@@ -1291,6 +1401,7 @@ def create_mathjson_solver(solver_parameters):
                 "FindIntervalIndex": FindIntervalIndex,
                 "TrapezoidalIntegrate": TrapezoidalIntegrate,
                 "Reduce": Reduce,
+                "Product": Product,
                 "Appended": Appended,
                 "Sin": Sin,
                 "Cos": Cos,
@@ -1385,13 +1496,16 @@ def create_mathjson_solver(solver_parameters):
                 #     NotImplementedError(f"'{s[0]}' is not supported"), s
                 # )
                 return s
+        elif s in c:
+            # Local scope (Constants, Reduce accumulator/current/index,
+            # Function parameters, ...) shadows top-level solver parameters
+            # of the same name, matching normal lexical scoping.
+            return f(c[s], c)
         elif s in solver_parameters:
             try:
                 return f(solver_parameters[s], c)
             except RecursionError:
                 return solver_parameters[s]
-        elif s in c:
-            return f(c[s], c)
         else:
             # raise KeyError(f"Parameter '{s}' is not defined")
             return s
@@ -1489,6 +1603,7 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "TrapezoidalIntegrate",
         "TrapezoidalIntegrate",
         "Reduce",
+        "Product",
         "Appended",
         "Sin",
         "Cos",
@@ -1571,10 +1686,37 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
                 li.update(extract_variables(x[1], li, ignore_list))
             li.update(extract_variables(s[-1], li, ignore_list))
         elif s[0] == "If":
-            for elif_block in s[1:-1]:  # s[1] is list
-                for x in elif_block:
+            # Mirror the calling-convention detection used by the solver's
+            # own `If` (see its docstring / comments): CortexJS flat form
+            # ["If", cond, then[, else]] vs. the Python pair form
+            # ["If", [cond, val], ..., else_val].
+            is_cortexjs_form = len(s) > 1 and (
+                not isinstance(s[1], list)
+                or (
+                    bool(s[1])
+                    and isinstance(s[1][0], str)
+                    and s[1][0] in constructs
+                )
+            )
+            if is_cortexjs_form:
+                for x in s[1:]:
                     li.update(extract_variables(x, li, ignore_list))
-            li.update(extract_variables(s[-1], li, ignore_list))
+            else:
+                for elif_block in s[1:-1]:  # s[1] is list
+                    for x in elif_block:
+                        li.update(extract_variables(x, li, ignore_list))
+                li.update(extract_variables(s[-1], li, ignore_list))
+        elif s[0] == "Function":
+            # ["Function", body, param1, param2, ...]: parameter names (and
+            # the anonymous placeholders "_", "_1", "_2", ...) are bound
+            # locally, not free variables.
+            for p in s[2:]:
+                if isinstance(p, str):
+                    ignore_list.add(p)
+            ignore_list.update({f"_{i}" for i in range(1, 10)})
+            ignore_list.add("_")
+            if len(s) > 1:
+                li.update(extract_variables(s[1], li, ignore_list))
         else:
             for x in s[1:]:
                 li.update(extract_variables(x, li, ignore_list))

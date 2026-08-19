@@ -62,6 +62,10 @@ except MathJSONException as e:
 solver(["Map", ["Array", 1, 2, 3, 4], ["Multiply"], 2])  # [2, 4, 6, 8]
 solver(["Reduce", ["Array", 1, 2, 3, 4], 0, ["Add", "acc", "item"],
         ["Variable", "acc"], ["Variable", "item"], ["Variable", "i"]])  # 10
+
+# CortexJS-style forms also work: a lambda via Function, and a 2-argument Reduce
+solver(["Map", ["Array", 1, 2, 3, 4], ["Function", ["Multiply", "_", 2]]])  # [2, 4, 6, 8]
+solver(["Reduce", ["Array", 1, 2, 3, 4], ["Add"]])                          # 10
 ```
 
 ## Supported Operations
@@ -74,9 +78,9 @@ The library supports a comprehensive set of mathematical operations:
 * **Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
 * **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
 * **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Variance, StandardDeviation, Length/Count
-* **Functional Programming:** Map, Reduce, Filter
+* **Functional Programming:** Map/StrictMap, Reduce, Filter, Product (all also accept CortexJS calling conventions, including `Function` lambdas)
 * **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended, First, Last, Rest, Most, Reverse, Sort, Unique, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct
-* **Control Flow:** If statements, Switch-Case/Which, Constants definition
+* **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch-Case/Which, Constants definition
 * **Type Conversion:** Int, Float, Str, IsDefined
 * **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
 * **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc
