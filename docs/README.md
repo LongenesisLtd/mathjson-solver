@@ -405,6 +405,22 @@ else 9000
 
 `If` expressions do not need to be strictly _boolean_. Any value that is not _false_ are considered _true_.
 
+#### CortexJS flat form
+
+`If` also accepts the CortexJS flat form:
+
+```
+["If", <condition>, <then-expression>]
+["If", <condition>, <then-expression>, <else-expression>]
+```
+
+```python
+["If", ["Greater", "x", 3], 42, 99]   # 42 if x > 3, otherwise 99
+["If", ["Greater", "x", 3], 42]       # 42 if x > 3, otherwise None (CortexJS "Nothing")
+```
+
+The two forms are detected automatically: in the pair form, `s[1]` is always a `[condition, value]` pair; in the flat form, `s[1]` *is* the condition. This is unambiguous as long as a pair-form condition that happens to be a bare parameter reference is wrapped in `IsTrue`/`IsFalse` (the pattern already recommended above) rather than used bare, e.g. prefer `[["IsTrue", "my_flag"], "yes"]` over `["my_flag", "yes"]`.
+
 ### Switch-Case Statement
 ```
 ["Switch", <on-expression>, <default-result-expression>, [<case1-expression>, <result-expression>], ...],
@@ -629,7 +645,22 @@ Extracts a portion of an array between start and end indices (exclusive end).
 ```
 
 #### Reduce
-Reduces an array to a single value by iteratively applying a function that has access to an accumulator, current element, and index. This is a powerful functional programming construct that enables stateful computations over arrays.
+Reduces an array to a single value. Two calling conventions are supported, chosen automatically by argument count.
+
+**CortexJS form** (3 or 4 arguments):
+```python
+["Reduce", array, function]
+["Reduce", array, function, initial_value]
+```
+`function` is applied as `function(accumulator, current_item)` on each element; a call template (e.g. `["Add"]`) or a [`Function`](#function) expression can be used. Without `initial_value`, the first element seeds the accumulator.
+
+```python
+["Reduce", ["Array", 1, 2, 3, 4], ["Add"]]                                        # 10 (no initial value)
+["Reduce", ["Array", 1, 2, 3, 4], ["Function", ["Add", "_1", "_2"]], 0]           # 10
+["Reduce", ["Array", 1, 2, 3, 4], ["Function", ["Add", "acc", "n"], "acc", "n"], 0]  # 10
+```
+
+**Python form** (6 arguments): access to an accumulator, current element, *and* index — a powerful functional programming construct that enables stateful computations over arrays.
 
 **Syntax:**
 ```python
@@ -724,6 +755,13 @@ When building state tuples with multiple values, use the nested `Appended` patte
 ```
 
 This pattern can be extended for any number of state variables by adding more nested `Appended` calls.
+
+#### Product
+Multiplies together the numeric elements of an array.
+
+```python
+["Product", ["Array", 5, 7, 11]]                   # 385
+```
 
 #### Appended
 Appends a value to the end of an array, returning a new array with the added element.
@@ -1159,19 +1197,34 @@ Two-argument arctangent, `atan2(y, x)`, which correctly determines the quadrant 
 ## Advanced Functions
 
 ### Map
-Applies a function to each element of an array, returning a new array with the results. If the function fails for an element, the original element is preserved.
+Applies a function to each element of an array, returning a new array with the results. If the function fails for an element, the original element is preserved. `StrictMap` behaves the same but does not catch per-element failures.
+
+The `function` argument accepts two forms: the original "call template" (a construct name wrapped in a list, e.g. `["Square"]`, with any trailing arguments to `Map` appended on every call), or a CortexJS-style [`Function`](#function) expression.
 
 ```python
 ["Map", ["Array", 1, 2, 3], ["Square"]]                    # ["Array", 1, 4, 9]
 ["Map", ["Array", 1, 2, 3, None, "a"], ["Square"]]         # ["Array", 1, 4, 9, None, "a"]
 ["Map", ["Array", 1, 2, 3], ["Power"], 2]                  # ["Array", 1, 4, 9]
 ["Map", ["Array", 1, 2, 3], ["GreaterEqual"], 2]           # ["Array", False, True, True]
+
+# CortexJS Function form, anonymous placeholder
+["Map", ["Array", 1, 2, 3, 4], ["Function", ["Multiply", "_", 2]]]      # ["Array", 2, 4, 6, 8]
+# CortexJS Function form, named parameter
+["Map", ["Array", 1, 2, 3], ["Function", ["Add", "n", 1], "n"]]         # ["Array", 2, 3, 4]
 ```
 
 Complex example with aggregation:
 
 ```python
 ["Sum", ["Map", ["Array", 1, 2, 3, 4, 1, 1, 0, 1], ["GreaterEqual"], 2]]  # 3
+```
+
+### Filter
+Keeps only the elements of an array for which `function` evaluates truthy. Takes the same `function` argument forms as `Map` (call template or `Function` expression).
+
+```python
+["Filter", ["Array", 1, 2, 3], ["LessEqual"], 2]                            # ["Array", 1, 2]
+["Filter", ["Array", 1, 2, 3, 4, 5], ["Function", ["Greater", "_", 2]]]     # ["Array", 3, 4, 5]
 ```
 
 ### HasMatchingSublist
@@ -1290,7 +1343,25 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 ```
 
 ### Function
-**Note: This is a placeholder function for future implementation.** Currently not functional.
+Defines a CortexJS-style lambda:
+
+```
+["Function", body_expression, param_name1, param_name2, ...]
+```
+
+`body_expression` is evaluated with the given parameter names bound to whatever arguments the function is called with. `Function` expressions are meant to be passed as the `function` argument of [`Map`](#map), [`Filter`](#filter), and [`Reduce`](#reduce), which call them with 1 argument (the element) or 2 (accumulator, current item) respectively.
+
+If no parameter names are given, the anonymous placeholders `"_"` (bound only when there is a single argument) and `"_1"`, `"_2"`, ... (always bound, in order) are used instead:
+
+```python
+["Function", ["Multiply", "_", 2]]           # body refers to its single argument as "_"
+["Function", ["Add", "_1", "_2"]]            # body refers to two arguments as "_1" and "_2"
+["Function", ["Add", "acc", "n"], "acc", "n"]  # named parameters
+```
+
+Evaluating a `["Function", ...]` expression outside of such a context (i.e. not consumed by `Map`/`Filter`/`Reduce`) just returns it unevaluated.
+
+**Note:** a parameter name bound inside a `Function` body correctly shadows a top-level solver parameter of the same name.
 
 ---
 
@@ -1353,7 +1424,7 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 
 ### Control Flow
 - [Constants](#constants) - Define constants
-- [If](#if-statement) - Conditional statements
+- [If](#if-statement) - Conditional statements (Python pair form and CortexJS flat form)
 - [Switch / Which](#switch-case-statement) - Switch-case statements
 
 ### Arrays and Aggregation
@@ -1377,7 +1448,8 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Slice](#slice) - Extract array portion
 - [CumulativeProduct](#cumulativeproduct) - Cumulative product calculation
 - [CumulativeSum](#cumulativesum) - Cumulative sum calculation
-- [Reduce](#reduce) - Reduce array to single value with accumulator
+- [Reduce](#reduce) - Reduce array to single value (CortexJS `fn` form or Python accumulator form)
+- [Product](#product) - Multiply array elements together
 - [Appended](#appended) - Append value to array
 
 ### Boolean and Set Operations
@@ -1427,11 +1499,12 @@ Finds the interval index where a value falls within a sorted array of bounds. Re
 - [Pi, Degrees, ExponentialE, GoldenRatio](#constants) - Constants
 
 ### Advanced Functions
-- [Map](#map) - Apply function to array elements
+- [Map / StrictMap](#map) - Apply function to array elements
+- [Filter](#filter) - Keep array elements matching a condition
 - [HasMatchingSublist](#hasmatchingsublist) - Advanced sublist matching
 
 ### Integration Functions
-- [Function](#function) - Function definition (placeholder)
+- [Function](#function) - CortexJS-style lambda, for use with Map/Filter/Reduce
 - [Variable](#variable) - Variable reference
 - [TrapezoidalIntegrate](#trapezoidalintegrate) - Numerical integration
 - [Interp](#interp) - Linear interpolation
