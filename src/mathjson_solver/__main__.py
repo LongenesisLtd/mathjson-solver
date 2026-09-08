@@ -294,7 +294,29 @@ def comparison_safe_converter_for_pairs(
     return v1, v2
 
 
-def create_mathjson_solver(solver_parameters):
+def translate_v1_mathjson(expr):
+    """
+    Rewrite a MathJSON expression written for mathjson-solver < 2.0.0 so it
+    evaluates to the same result on >= 2.0.0.
+
+    The only breaking change introduced in 2.0.0 is "Log": before 2.0.0 it
+    always meant natural log (`["Log", x]` == `math.log(x)`); from 2.0.0 on
+    it matches CortexJS (`["Log", x]` is log base 10, `["Log", x, b]` is log
+    base `b`), and natural log moved to "Ln". Since the pre-2.0.0 "Log" only
+    ever took one argument, every legacy `["Log", x]` node has exactly one
+    correct translation: `["Ln", x]`. This function walks the expression
+    tree and applies that rewrite, leaving everything else untouched, so
+    existing expressions don't need to be hand-migrated to keep working
+    while still gaining access to functions added in 2.x.
+    """
+    if isinstance(expr, list):
+        if len(expr) == 2 and expr[0] == "Log":
+            return ["Ln", translate_v1_mathjson(expr[1])]
+        return [translate_v1_mathjson(item) for item in expr]
+    return expr
+
+
+def create_mathjson_solver(solver_parameters, legacy_v1=False):
     def f(s, *args):
         if args:
             c = deepcopy(args[0])
@@ -1509,6 +1531,13 @@ def create_mathjson_solver(solver_parameters):
         else:
             # raise KeyError(f"Parameter '{s}' is not defined")
             return s
+
+    if legacy_v1:
+
+        def legacy_v1_f(s, *args):
+            return f(translate_v1_mathjson(s), *args)
+
+        return legacy_v1_f
 
     return f
 
