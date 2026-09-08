@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-09-08
+
+### Added
+
+- **Migration helper for 1.x users:** `translate_v1_mathjson(expr)` rewrites the one breaking change from 2.0.0 (`["Log", x]`, previously natural log) to its 2.x equivalent (`["Ln", x]`), leaving everything else untouched. `create_solver(parameters, legacy_v1=True)` applies this automatically, so existing 1.x expressions keep evaluating to the same results on 2.x without hand-editing, while still gaining access to functions added in 2.x.
+
+[2.2.0]: https://github.com/LongenesisLtd/mathjson-solver/compare/v2.1.1...v2.2.0
+
 ## [2.1.1] - 2026-08-19
 
 ### Fixed

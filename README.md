@@ -4,7 +4,7 @@
 [![PyPI Downloads](https://static.pepy.tech/badge/mathjson-solver/month)](https://pepy.tech/projects/mathjson-solver)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
-> **Heads up:** Version 2 introduces a few breaking changes (see [CHANGELOG.md](CHANGELOG.md)) as part of steering back towards greater compatibility with [CortexJS MathJSON](https://cortexjs.io/compute-engine/). If you need to stay on the old behavior, bugfix releases for the 1.x line continue on the [`1.x` branch](https://github.com/LongenesisLtd/mathjson-solver/tree/1.x).
+> **Heads up:** Version 2 introduces a breaking change (see [CHANGELOG.md](CHANGELOG.md)) as part of steering back towards greater compatibility with [CortexJS MathJSON](https://cortexjs.io/compute-engine/): `Log` is now log base 10 instead of natural log. Stuck on pre-2.0.0 expressions but want the functions added in 2.x? Pass `legacy_v1=True` to `create_solver()` (see [Migrating from 1.x](#migrating-from-1x)) instead of hand-migrating every expression. Bugfix releases for the 1.x line also continue on the [`1.x` branch](https://github.com/LongenesisLtd/mathjson-solver/tree/1.x).
 
 A reliable Python library for numerically evaluating mathematical expressions in MathJSON format. Perfect for applications that need to safely execute user-provided formulas, calculate dynamic equations, or process mathematical data.
 
@@ -13,12 +13,14 @@ A reliable Python library for numerically evaluating mathematical expressions in
 ## Table of Contents
 - [Installation](#installation)
 - [Quick Start](#quick-start)
+- [Migrating from 1.x](#migrating-from-1x)
 - [Supported Operations](#supported-operations)
 - [Error Handling](#error-handling)
 - [Use Cases](#use-cases)
 - [Testing](#testing)
 - [Community](#community)
 - [Contributing](#contributing)
+- [Related Projects](#related-projects)
 
 ## Installation
 
@@ -67,6 +69,27 @@ solver(["Reduce", ["Array", 1, 2, 3, 4], 0, ["Add", "acc", "item"],
 solver(["Map", ["Array", 1, 2, 3, 4], ["Function", ["Multiply", "_", 2]]])  # [2, 4, 6, 8]
 solver(["Reduce", ["Array", 1, 2, 3, 4], ["Add"]])                          # 10
 ```
+
+## Migrating from 1.x
+
+Version 2.0.0's only breaking change is `Log`: pre-2.0.0 it was always natural log, `["Log", x]` == `math.log(x)`. From 2.0.0 on it matches [CortexJS](https://cortexjs.io/compute-engine/) — `["Log", x]` is log base 10, `["Log", x, b]` is log base `b` — and natural log moved to `Ln`.
+
+If you have existing expressions built for 1.x and don't want to hand-edit every `Log` node just to pick up functions added in 2.x (`Product`, the CortexJS forms of `If`/`Map`/`Filter`/`Reduce`, the new aliases, etc.), pass `legacy_v1=True` when creating the solver. It rewrites every `["Log", x]` to `["Ln", x]` before evaluating, so old expressions keep producing the same results without modification:
+
+```python
+solver = create_solver(parameters, legacy_v1=True)
+solver(["Log", 8])  # 2.0794... (natural log, matching pre-2.0.0 behavior)
+```
+
+You can also run the rewrite yourself and inspect or store the translated expression:
+
+```python
+from mathjson_solver import translate_v1_mathjson
+
+translate_v1_mathjson(["Add", ["Log", 8], 1])  # ["Add", ["Ln", 8], 1]
+```
+
+`legacy_v1=True` only affects `Log`. Every other 1.x expression already evaluates identically on 2.x without any translation.
 
 ## Supported Operations
 
@@ -147,6 +170,9 @@ We welcome contributions! Please feel free to:
 - Report bugs or request features via [GitHub Issues](https://github.com/LongenesisLtd/mathjson-solver/issues)
 - Submit pull requests with improvements
 
+## Related Projects
+
+We also created [`londec`](https://pypi.org/project/londec/) — evaluate tree-structured conditions against an ordered history of events. It uses mathjson-solver internally.
 
 ## License
 
@@ -154,7 +180,9 @@ We welcome contributions! Please feel free to:
 
 ## References
 
-This implementation was inspired by the [CortexJS Compute Engine](https://cortexjs.io/compute-engine/), though designed as an independent implementation focused on our specific use cases.
+This library implements the [MathJSON](https://cortexjs.io/mathjson/) format as defined by the [CortexJS Compute Engine](https://cortexjs.io/compute-engine/). Since 2.0.0, mathjson-solver has been steering towards greater compatibility with CortexJS's calling conventions and function set — while remaining an independent Python implementation, not a port or dependency of CortexJS.
+
+**Scope:** mathjson-solver targets compatibility with CortexJS's array-form calling conventions and standard function names — not the full [Compute Engine](https://cortexjs.io/compute-engine/), which is a symbolic CAS.
 
 ---
 
