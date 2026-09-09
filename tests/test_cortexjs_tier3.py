@@ -39,6 +39,49 @@ def test_if_cortexjs_form_requires_valid_arity():
         solver(["If", ["Greater", 1, 0]])
 
 
+# --- Which: CortexJS flat condition/value chain (distinct from Switch) ---
+
+
+@pytest.mark.parametrize(
+    "parameters, expression, expected_result",
+    [
+        (
+            {"x": 2},
+            ["Which", ["Equal", "x", 1], "a", ["Equal", "x", 2], "b"],
+            "b",
+        ),
+        # No condition matches -> None (CortexJS `Nothing`).
+        (
+            {"x": 5},
+            ["Which", ["Equal", "x", 1], "a", ["Equal", "x", 2], "b"],
+            None,
+        ),
+        # First truthy condition wins, later ones are never reached.
+        (
+            {},
+            ["Which", True, "first", True, "second"],
+            "first",
+        ),
+        # Values can be lazily-unreachable expressions - only the winning
+        # branch is evaluated.
+        (
+            {},
+            ["Which", False, ["Divide", 1, 0], True, "safe"],
+            "safe",
+        ),
+    ],
+)
+def test_which_forms(parameters, expression, expected_result):
+    solver = create_solver(parameters)
+    assert solver(expression) == expected_result
+
+
+def test_which_requires_even_arity():
+    solver = create_solver({})
+    with pytest.raises(Exception):
+        solver(["Which", True, "a", False])
+
+
 # --- Function / Map / Filter / Reduce: CortexJS lambda form ---
 
 
@@ -156,3 +199,15 @@ def test_extract_variables_function_params_are_not_free_variables():
         ["Map", "arr", ["Function", ["Add", "acc", "extra"], "acc"]], set(), set()
     )
     assert result == {"arr", "extra"}
+
+
+def test_extract_variables_which():
+    result = extract_variables(
+        ["Which", ["Equal", "x", 1], "y", ["Equal", "z", 2], "w"], set(), set()
+    )
+    assert result == {"x", "y", "z", "w"}
+
+
+def test_extract_variables_true_false_are_not_free_variables():
+    result = extract_variables(["And", "True", "x", "False"], set(), set())
+    assert result == {"x"}

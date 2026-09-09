@@ -1,9 +1,21 @@
 import numbers
+import sys
 from typing import Union, Any
 from functools import reduce
+from fractions import Fraction
 import math
 from copy import deepcopy
-from statistics import median, variance, stdev
+from statistics import (
+    median,
+    variance,
+    stdev,
+    pvariance,
+    pstdev,
+    mode,
+    quantiles,
+    covariance,
+    correlation,
+)
 import datetime
 
 NUMPY_AVAILABLE = False
@@ -325,6 +337,15 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
         #         c = deepcopy(kwargs.get("c", {}))
         if isinstance(s, numbers.Number):
             return s
+        # CortexJS represents the boolean literals as the bare symbols
+        # "True" and "False" (as opposed to native JSON `true`/`false`,
+        # which already arrive here as Python bool - itself a `numbers.Number`
+        # subtype, so it's handled by the check above). Resolve them to
+        # actual booleans unconditionally, the same way numeric literals
+        # are resolved above, so they can't be shadowed by a same-named
+        # solver parameter or local variable.
+        if s == "True" or s == "False":
+            return s == "True"
         if isinstance(s, list):
 
             def Arr(s):
@@ -472,6 +493,12 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
             def First(s):
                 return _arr_vals(s)[0]
 
+            def Second(s):
+                return _arr_vals(s)[1]
+
+            def Third(s):
+                return _arr_vals(s)[2]
+
             def Last(s):
                 return _arr_vals(s)[-1]
 
@@ -554,6 +581,465 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 else:
                     return vals[idx]
 
+            def Take(s):
+                """
+                ["Take", array, n]
+                First `n` elements if n >= 0; last `n` elements if n < 0.
+                Distinct from `Slice`, which takes an explicit [start, end)
+                range instead of a count.
+                """
+                vals = _arr_vals(s)
+                n = int(f(s[2], c))
+                if n >= 0:
+                    return ["Array"] + vals[:n]
+                return ["Array"] + vals[n:]
+
+            def Drop(s):
+                """
+                ["Drop", array, n]
+                All elements except the first `n` if n >= 0; except the
+                last `n` if n < 0.
+                """
+                vals = _arr_vals(s)
+                n = int(f(s[2], c))
+                if n >= 0:
+                    return ["Array"] + vals[n:]
+                return ["Array"] + vals[:n]
+
+            def TakeWhile(s):
+                """
+                ["TakeWhile", array, predicate]
+                Elements from the start, up to (excluding) the first one
+                for which `predicate` is false.
+                """
+                result = []
+                for v in _arr_vals(s):
+                    if not _apply_fn(s[2], [v]):
+                        break
+                    result.append(v)
+                return ["Array"] + result
+
+            def DropWhile(s):
+                """
+                ["DropWhile", array, predicate]
+                Remaining elements from (and including) the first one for
+                which `predicate` is false.
+                """
+                vals = _arr_vals(s)
+                i = 0
+                while i < len(vals) and _apply_fn(s[2], [vals[i]]):
+                    i += 1
+                return ["Array"] + vals[i:]
+
+            def Contains(s):
+                """
+                ["Contains", array, value]
+                Whether `value` occurs in `array`. CortexJS argument order
+                (collection first) - the existing `In` takes them the
+                other way round (`["In", value, collection]`).
+                """
+                return f(s[2], c) in _arr_vals(s)
+
+            def IndexOf(s):
+                """
+                ["IndexOf", array, value]
+                1-indexed position of the first occurrence of `value`, or
+                None if it doesn't occur.
+                """
+                vals = _arr_vals(s)
+                value = f(s[2], c)
+                try:
+                    return vals.index(value) + 1
+                except ValueError:
+                    return None
+
+            def IndexWhere(s):
+                """
+                ["IndexWhere", array, predicate]
+                1-indexed position of the first element for which
+                `predicate` is true, or None if none match.
+                """
+                for i, v in enumerate(_arr_vals(s)):
+                    if _apply_fn(s[2], [v]):
+                        return i + 1
+                return None
+
+            def Find(s):
+                """
+                ["Find", array, predicate]
+                The first element for which `predicate` is true, or None
+                if none match.
+                """
+                for v in _arr_vals(s):
+                    if _apply_fn(s[2], [v]):
+                        return v
+                return None
+
+            def CountIf(s):
+                """
+                ["CountIf", array, predicate]
+                Count of elements for which `predicate` is true.
+                """
+                return sum(1 for v in _arr_vals(s) if _apply_fn(s[2], [v]))
+
+            def Position(s):
+                """
+                ["Position", array, predicate]
+                Array of the 1-indexed positions of every element for
+                which `predicate` is true.
+                """
+                return ["Array"] + [
+                    i + 1
+                    for i, v in enumerate(_arr_vals(s))
+                    if _apply_fn(s[2], [v])
+                ]
+
+            def RotateLeft(s):
+                """
+                ["RotateLeft", array, n]
+                Circularly shifts `array` left by `n` positions.
+                """
+                vals = _arr_vals(s)
+                if not vals:
+                    return ["Array"]
+                n = int(f(s[2], c)) % len(vals)
+                return ["Array"] + vals[n:] + vals[:n]
+
+            def RotateRight(s):
+                """
+                ["RotateRight", array, n]
+                Circularly shifts `array` right by `n` positions.
+                """
+                vals = _arr_vals(s)
+                if not vals:
+                    return ["Array"]
+                n = int(f(s[2], c)) % len(vals)
+                if n == 0:
+                    return ["Array"] + vals
+                return ["Array"] + vals[-n:] + vals[:-n]
+
+            def MaxBy(s):
+                """
+                ["MaxBy", array, function]
+                The element of `array` for which `function(element)` is
+                largest.
+                """
+                return max(_arr_vals(s), key=lambda v: _apply_fn(s[2], [v]))
+
+            def MinBy(s):
+                """
+                ["MinBy", array, function]
+                The element of `array` for which `function(element)` is
+                smallest.
+                """
+                return min(_arr_vals(s), key=lambda v: _apply_fn(s[2], [v]))
+
+            def ArgMax(s):
+                """
+                ["ArgMax", array]
+                1-indexed position of the largest element.
+                """
+                vals = _arr_vals(s)
+                return max(range(len(vals)), key=lambda i: vals[i]) + 1
+
+            def ArgMin(s):
+                """
+                ["ArgMin", array]
+                1-indexed position of the smallest element.
+                """
+                vals = _arr_vals(s)
+                return min(range(len(vals)), key=lambda i: vals[i]) + 1
+
+            def Ordering(s):
+                """
+                ["Ordering", array]
+                Array of the 1-indexed positions that would put `array`
+                in ascending order.
+                """
+                vals = _arr_vals(s)
+                return ["Array"] + [
+                    i + 1 for i in sorted(range(len(vals)), key=lambda i: vals[i])
+                ]
+
+            def FlatMap(s):
+                """
+                ["FlatMap", array, function]
+                Applies `function` to each element (as with `Map`) and
+                flattens one level of the results - each result that is
+                itself an array is spliced in, others are kept as-is -
+                into a single array.
+                """
+                result = ["Array"]
+                for v in _arr_vals(s):
+                    mapped = _apply_fn(s[2], [v])
+                    if isinstance(mapped, list) and mapped and mapped[0] == "Array":
+                        result += mapped[1:]
+                    else:
+                        result.append(mapped)
+                return result
+
+            def Scan(s):
+                """
+                ["Scan", array, function] or ["Scan", array, function, initial]
+                Like `Reduce`'s CortexJS form (`function` applied as
+                `function(accumulator, current)`), but returns an array of
+                every intermediate accumulator value, including the seed,
+                instead of just the final one.
+                """
+                vals = _arr_vals(s)
+                fn_expr = s[2]
+                if len(s) == 4:
+                    acc = f(s[3], c)
+                    remaining = vals
+                else:
+                    if not vals:
+                        raise ValueError(
+                            "'Scan' on an empty collection requires an initial value."
+                        )
+                    acc = vals[0]
+                    remaining = vals[1:]
+                result = ["Array", acc]
+                for v in remaining:
+                    acc = _apply_fn(fn_expr, [acc, v])
+                    result.append(acc)
+                return result
+
+            def Differences(s):
+                """
+                ["Differences", array]
+                Array of successive differences: element[i+1] - element[i].
+                """
+                vals = _arr_vals(s)
+                return ["Array"] + [b - a for a, b in zip(vals, vals[1:])]
+
+            def Fold(s):
+                """
+                ["Fold", function, array] or ["Fold", function, array, initial]
+                The function-first form of `Reduce`'s CortexJS calling
+                convention (`["Reduce", array, function, ...]`) - same
+                behaviour, arguments swapped.
+                """
+                if len(s) == 3:
+                    return Reduce(["Reduce", s[2], s[1]])
+                return Reduce(["Reduce", s[2], s[1], s[3]])
+
+            def Dedup(s):
+                """
+                ["Dedup", array]
+                Removes only *consecutive* duplicate elements - distinct
+                from `Unique`, which removes every duplicate regardless of
+                position.
+                """
+                result = []
+                for v in _arr_vals(s):
+                    if not result or result[-1] != v:
+                        result.append(v)
+                return ["Array"] + result
+
+            def Insert(s):
+                """
+                ["Insert", array, index, value]
+                Inserts `value` at the 1-indexed `index` (CortexJS
+                convention, matching `At`); negative indexes count from
+                the end.
+                """
+                vals = _arr_vals(s)
+                idx = int(f(s[2], c))
+                value = f(s[3], c)
+                vals.insert(idx - 1 if idx > 0 else idx, value)
+                return ["Array"] + vals
+
+            def DeleteAt(s):
+                """
+                ["DeleteAt", array, index]
+                Removes the element at the 1-indexed `index`; negative
+                indexes count from the end.
+                """
+                vals = _arr_vals(s)
+                idx = int(f(s[2], c))
+                del vals[idx - 1 if idx > 0 else idx]
+                return ["Array"] + vals
+
+            def ReplaceAt(s):
+                """
+                ["ReplaceAt", array, index, value]
+                Replaces the element at the 1-indexed `index` with
+                `value`; negative indexes count from the end.
+                """
+                vals = _arr_vals(s)
+                idx = int(f(s[2], c))
+                value = f(s[3], c)
+                vals[idx - 1 if idx > 0 else idx] = value
+                return ["Array"] + vals
+
+            def Partition(s):
+                """
+                ["Partition", array, size]
+                Splits `array` into consecutive chunks of length `size`
+                (the last chunk may be shorter). Distinct from `Chunk`,
+                which instead takes the number of groups to split into.
+                """
+                vals = _arr_vals(s)
+                size = int(f(s[2], c))
+                if size <= 0:
+                    raise ValueError("'Partition' size must be a positive integer.")
+                return ["Array"] + [
+                    ["Array"] + vals[i : i + size] for i in range(0, len(vals), size)
+                ]
+
+            def Chunk(s):
+                """
+                ["Chunk", array, n]
+                Splits `array` into `n` roughly equal-sized consecutive
+                groups.
+                """
+                vals = _arr_vals(s)
+                n = int(f(s[2], c))
+                if n <= 0:
+                    raise ValueError("'Chunk' group count must be a positive integer.")
+                base, extra = divmod(len(vals), n)
+                result, start = [], 0
+                for i in range(n):
+                    size = base + (1 if i < extra else 0)
+                    result.append(["Array"] + vals[start : start + size])
+                    start += size
+                return ["Array"] + result
+
+            def GroupBy(s):
+                """
+                ["GroupBy", array, function]
+                Groups elements of `array` by `function(element)`, in
+                order of first appearance of each key. Returns an array of
+                [key, group] pairs - there's no dedicated `Dictionary`
+                type in this solver.
+                """
+                order = []
+                groups = {}
+                for v in _arr_vals(s):
+                    k = _apply_fn(s[2], [v])
+                    hk = tuple(k) if isinstance(k, list) else k
+                    if hk not in groups:
+                        order.append((hk, k))
+                        groups[hk] = []
+                    groups[hk].append(v)
+                return ["Array"] + [
+                    ["Array", k, ["Array"] + groups[hk]] for hk, k in order
+                ]
+
+            def ChunkBy(s):
+                """
+                ["ChunkBy", array, function]
+                Splits `array` into consecutive runs sharing the same
+                `function(element)` key - unlike `GroupBy`, runs are not
+                merged across non-adjacent occurrences of the same key.
+                """
+                vals = _arr_vals(s)
+                if not vals:
+                    return ["Array"]
+                result = []
+                current = [vals[0]]
+                current_key = _apply_fn(s[2], [vals[0]])
+                for v in vals[1:]:
+                    k = _apply_fn(s[2], [v])
+                    if k == current_key:
+                        current.append(v)
+                    else:
+                        result.append(["Array"] + current)
+                        current, current_key = [v], k
+                result.append(["Array"] + current)
+                return ["Array"] + result
+
+            def Tally(s):
+                """
+                ["Tally", array]
+                Counts occurrences of each distinct element, in order of
+                first appearance. Returns an array of [value, count]
+                pairs.
+                """
+                order = []
+                counts = {}
+                for v in _arr_vals(s):
+                    hv = tuple(v) if isinstance(v, list) else v
+                    if hv not in counts:
+                        order.append((hv, v))
+                        counts[hv] = 0
+                    counts[hv] += 1
+                return ["Array"] + [["Array", v, counts[hv]] for hv, v in order]
+
+            def _arr_vals_of(expr):
+                """
+                Like `_arr_vals`, but for an arbitrary expression instead
+                of assuming the array is at `s[1]` - needed by the
+                variadic set operations below.
+                """
+                lst = f(expr, c)
+                if not (isinstance(lst, list) and lst[0] == "Array"):
+                    raise ValueError("Parameter must be an array.")
+                return [f(x, c) for x in lst[1:]]
+
+            def Union(s):
+                """
+                ["Union", array1, array2, ...]
+                Distinct elements appearing in any of the given arrays, in
+                order of first appearance across the arguments
+                (left to right). Arrays stand in for CortexJS's `Set`
+                here - there's no dedicated set type in this solver.
+                """
+                result = []
+                for arg in s[1:]:
+                    for v in _arr_vals_of(arg):
+                        if v not in result:
+                            result.append(v)
+                return ["Array"] + result
+
+            def Intersection(s):
+                """
+                ["Intersection", array1, array2, ...]
+                Distinct elements common to every given array, in the
+                order they first appear in `array1`.
+                """
+                arrays = [_arr_vals_of(arg) for arg in s[1:]]
+                if not arrays:
+                    return ["Array"]
+                result = []
+                for v in arrays[0]:
+                    if v not in result and all(v in arr for arr in arrays[1:]):
+                        result.append(v)
+                return ["Array"] + result
+
+            def SetMinus(s):
+                """
+                ["SetMinus", array1, array2]
+                Distinct elements of `array1` that don't occur in
+                `array2`.
+                """
+                a = _arr_vals_of(s[1])
+                b = _arr_vals_of(s[2])
+                result = []
+                for v in a:
+                    if v not in b and v not in result:
+                        result.append(v)
+                return ["Array"] + result
+
+            def SymmetricDifference(s):
+                """
+                ["SymmetricDifference", array1, array2]
+                Distinct elements that occur in exactly one of
+                `array1`/`array2`: `array1`'s exclusive elements first
+                (in `array1`'s order), then `array2`'s (in `array2`'s
+                order).
+                """
+                a = _arr_vals_of(s[1])
+                b = _arr_vals_of(s[2])
+                result = []
+                for v in a:
+                    if v not in b and v not in result:
+                        result.append(v)
+                for v in b:
+                    if v not in a and v not in result:
+                        result.append(v)
+                return ["Array"] + result
+
             def IsPrime(s):
                 return _is_prime(f(s[1], c))
 
@@ -562,6 +1048,53 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
 
             def StandardDeviation(s):
                 return stdev(_arr_vals(s))
+
+            def PopulationVariance(s):
+                return pvariance(_arr_vals(s))
+
+            def PopulationStandardDeviation(s):
+                return pstdev(_arr_vals(s))
+
+            def Mode(s):
+                """
+                ["Mode", array]
+                The most frequently occurring value. Ties go to whichever
+                value appears first in `array` (matching Python's
+                `statistics.mode`).
+                """
+                return mode(_arr_vals(s))
+
+            def Quartiles(s):
+                """
+                ["Quartiles", array]
+                The three points (Q1, Q2/median, Q3) that divide `array`
+                into four equal-sized groups, using
+                `statistics.quantiles`' default ("exclusive") method.
+                """
+                return ["Array"] + quantiles(_arr_vals(s), n=4)
+
+            def InterquartileRange(s):
+                """
+                ["InterquartileRange", array]
+                Q3 - Q1.
+                """
+                q1, _, q3 = quantiles(_arr_vals(s), n=4)
+                return q3 - q1
+
+            def Covariance(s):
+                """
+                ["Covariance", array1, array2]
+                Sample covariance of two equal-length collections.
+                """
+                return covariance(_arr_vals_of(s[1]), _arr_vals_of(s[2]))
+
+            def Correlation(s):
+                """
+                ["Correlation", array1, array2]
+                The Pearson correlation coefficient of two equal-length
+                collections.
+                """
+                return correlation(_arr_vals_of(s[1]), _arr_vals_of(s[2]))
 
             def Any(s):
                 evaluated = f(s[1], c)
@@ -667,6 +1200,29 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                         return f(s[-1], c)  # return default value (else)
 
                 return f(s[-1], c)
+
+            def Which(s):
+                """
+                ["Which", cond1, expr1, cond2, expr2, ..., condN, exprN]
+                CortexJS multi-branch conditional: evaluates each `cond` in
+                order and returns the `expr` paired with the first truthy
+                one. Unlike 'Switch' (Python's value-equality dispatch),
+                each `cond` here is itself a boolean expression, not a
+                value to compare against - and unlike `If`'s pair form,
+                the pairs are flat (cond, expr as separate arguments, not
+                nested as [cond, expr]). Returns None (CortexJS `Nothing`)
+                if no condition matches.
+                """
+                args = s[1:]
+                if len(args) % 2 != 0:
+                    raise ValueError(
+                        "'Which' requires an even number of parameters "
+                        "(condition, value, ...)"
+                    )
+                for i in range(0, len(args), 2):
+                    if f(args[i], c):
+                        return f(args[i + 1], c)
+                return None
 
             def In(s):
                 if len(s) != 3:
@@ -911,6 +1467,69 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                     return v1 <= v2
                 except TypeError:
                     return False
+
+            def IdenticallyEqual(s):
+                """
+                ["IdenticallyEqual", a, b]
+                Stricter than `StrictEqual`: true only if `a` and `b` have
+                the same Python type *and* are equal - e.g. `1` and `1.0`
+                are `StrictEqual` but not `IdenticallyEqual`.
+                """
+                a = f(s[1], c)
+                b = f(s[2], c)
+                return type(a) == type(b) and a == b
+
+            def Congruent(s):
+                """
+                ["Congruent", a, b, modulus]
+                Whether `a` and `b` are congruent modulo `modulus`, i.e.
+                `(a - b) % modulus == 0`.
+                """
+                a = f(s[1], c)
+                b = f(s[2], c)
+                modulus = f(s[3], c)
+                return (a - b) % modulus == 0
+
+            def _rational_parts(s):
+                """
+                Numerator/denominator pair for `s[1]`. If `s[1]` is itself
+                an unevaluated `["Rational", n, d]` expression, its
+                declared `n`/`d` are used exactly. Otherwise, the
+                evaluated value is reconstructed as the closest fraction
+                with a bounded denominator - a best-effort approximation,
+                not exact/symbolic, since this solver has no dedicated
+                rational-number type carried through arithmetic (see
+                `Rational`'s docstring).
+                """
+                expr = s[1]
+                if (
+                    isinstance(expr, list)
+                    and len(expr) == 3
+                    and expr[0] == "Rational"
+                ):
+                    return int(f(expr[1], c)), int(f(expr[2], c))
+                value = f(expr, c)
+                if isinstance(value, int):
+                    return value, 1
+                frac = Fraction(value).limit_denominator(10**6)
+                return frac.numerator, frac.denominator
+
+            def Numerator(s):
+                return _rational_parts(s)[0]
+
+            def Denominator(s):
+                return _rational_parts(s)[1]
+
+            def Rational(s):
+                """
+                ["Rational", numerator, denominator]
+                Evaluates to `numerator / denominator` as a plain float -
+                there's no exact rational-number type carried through
+                arithmetic in this solver, so precision beyond a float is
+                only preserved when `Numerator`/`Denominator` read this
+                expression directly, rather than its evaluated value.
+                """
+                return f(s[1], c) / f(s[2], c)
 
             def BooleanAnd(s):
                 """
@@ -1346,6 +1965,8 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "IsTrue": lambda s: bool(f(s[1], c)),
                 "IsFalse": lambda s: not bool(f(s[1], c)),
                 "StrictEqual": lambda s: f(s[1], c) == f(s[2], c),
+                "IdenticallyEqual": IdenticallyEqual,
+                "Congruent": Congruent,
                 # "Greater": lambda s: f(s[1], c) > f(s[2], c),
                 "Greater": Greater,
                 # "GreaterEqual": lambda s: f(s[1], c) >= f(s[2], c),
@@ -1378,6 +1999,8 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "List": lambda s: ["Array"] + [f(x, c) for x in s[1:]],  # CortexJS name for Array
                 "In": In,
                 "Not_in": Not_in,
+                "Element": In,  # CortexJS name for In (["Element", value, set])
+                "NotElement": Not_in,  # CortexJS name for Not_in
                 "Contains_any_of": Contains_any_of,
                 "Contains_all_of": Contains_all_of,
                 "Contains_none_of": Contains_none_of,
@@ -1433,7 +2056,7 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "Arctan": Arctan,
                 "Arctan2": lambda s: math.atan2(f(s[1], c), f(s[2], c)),
                 "Pi": Pi,
-                "Which": Switch,  # CortexJS name for Switch
+                "Which": Which,  # CortexJS multi-branch conditional (not Switch - see Which's docstring)
                 # --- Trigonometric: reciprocal, hyperbolic, area-hyperbolic ---
                 "Cot": lambda s: 1 / math.tan(f(s[1], c)),
                 "Sec": lambda s: 1 / math.cos(f(s[1], c)),
@@ -1461,6 +2084,12 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "Degrees": lambda s: math.pi / 180,
                 "ExponentialE": lambda s: math.e,
                 "GoldenRatio": lambda s: (1 + math.sqrt(5)) / 2,
+                "MachineEpsilon": lambda s: sys.float_info.epsilon,
+                "CatalanConstant": lambda s: 0.915965594177219015054603514932384110774,
+                "EulerGamma": lambda s: 0.5772156649015328606065120900824024310421,
+                "Rational": Rational,
+                "Numerator": Numerator,
+                "Denominator": Denominator,
                 # --- Number theory / special functions ---
                 "Chop": lambda s: 0 if abs(f(s[1], c)) < 1e-10 else f(s[1], c),
                 "Mod": lambda s: f(s[1], c) % f(s[2], c),
@@ -1481,8 +2110,17 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 # --- Statistics ---
                 "Variance": Variance,
                 "StandardDeviation": StandardDeviation,
+                "PopulationVariance": PopulationVariance,
+                "PopulationStandardDeviation": PopulationStandardDeviation,
+                "Mode": Mode,
+                "Quartiles": Quartiles,
+                "InterquartileRange": InterquartileRange,
+                "Covariance": Covariance,
+                "Correlation": Correlation,
                 # --- Collections ---
                 "First": First,
+                "Second": Second,
+                "Third": Third,
                 "Last": Last,
                 "Rest": Rest,
                 "Most": Most,
@@ -1494,6 +2132,42 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "Unique": Unique,
                 "Zip": Zip,
                 "At": At,
+                "Take": Take,
+                "Drop": Drop,
+                "TakeWhile": TakeWhile,
+                "DropWhile": DropWhile,
+                "Contains": Contains,
+                "IndexOf": IndexOf,
+                "IndexWhere": IndexWhere,
+                "Find": Find,
+                "CountIf": CountIf,
+                "Position": Position,
+                "RotateLeft": RotateLeft,
+                "RotateRight": RotateRight,
+                "MaxBy": MaxBy,
+                "MinBy": MinBy,
+                "ArgMax": ArgMax,
+                "ArgMin": ArgMin,
+                "Ordering": Ordering,
+                "FlatMap": FlatMap,
+                "Scan": Scan,
+                "Differences": Differences,
+                "Fold": Fold,
+                "Dedup": Dedup,
+                "Append": Appended,  # CortexJS name for Appended
+                "Insert": Insert,
+                "DeleteAt": DeleteAt,
+                "ReplaceAt": ReplaceAt,
+                "Partition": Partition,
+                "Chunk": Chunk,
+                "GroupBy": GroupBy,
+                "ChunkBy": ChunkBy,
+                "Tally": Tally,
+                # --- Set algebra (over Array - no dedicated Set type) ---
+                "Union": Union,
+                "Intersection": Intersection,
+                "SetMinus": SetMinus,
+                "SymmetricDifference": SymmetricDifference,
             }
             if not s:
                 # Empty equation given - []
@@ -1591,6 +2265,8 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "ContainsAnyOf",
         "ContainsAllOf",
         "ContainsNoneOf",
+        "Element",
+        "NotElement",
         "Int",
         "Float",
         "Floor",
@@ -1600,6 +2276,8 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "IsDefined",
         "IsUndefined",
         "StrictEqual",
+        "IdenticallyEqual",
+        "Congruent",
         "NotEqual",
         "StrictSwitch",
         "Map",
@@ -1672,6 +2350,12 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Degrees",
         "ExponentialE",
         "GoldenRatio",
+        "MachineEpsilon",
+        "CatalanConstant",
+        "EulerGamma",
+        "Rational",
+        "Numerator",
+        "Denominator",
         "Chop",
         "Mod",
         "Clamp",
@@ -1689,7 +2373,16 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Equivalent",
         "Variance",
         "StandardDeviation",
+        "PopulationVariance",
+        "PopulationStandardDeviation",
+        "Mode",
+        "Quartiles",
+        "InterquartileRange",
+        "Covariance",
+        "Correlation",
         "First",
+        "Second",
+        "Third",
         "Last",
         "Rest",
         "Most",
@@ -1701,11 +2394,48 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "Unique",
         "Zip",
         "At",
+        "Take",
+        "Drop",
+        "TakeWhile",
+        "DropWhile",
+        "Contains",
+        "IndexOf",
+        "IndexWhere",
+        "Find",
+        "CountIf",
+        "Position",
+        "RotateLeft",
+        "RotateRight",
+        "MaxBy",
+        "MinBy",
+        "ArgMax",
+        "ArgMin",
+        "Ordering",
+        "FlatMap",
+        "Scan",
+        "Differences",
+        "Fold",
+        "Dedup",
+        "Append",
+        "Insert",
+        "DeleteAt",
+        "ReplaceAt",
+        "Partition",
+        "Chunk",
+        "GroupBy",
+        "ChunkBy",
+        "Tally",
+        "Union",
+        "Intersection",
+        "SetMinus",
+        "SymmetricDifference",
     ]
     if isinstance(s, str):
         if s in ignore_list:
             return li
-        if s not in constructs:
+        # "True"/"False" are boolean literals (see `f`'s handling of them),
+        # not solver-parameter references, so they're never free variables.
+        if s not in constructs and s not in ("True", "False"):
             li.add(s)
         return li
     elif isinstance(s, list):

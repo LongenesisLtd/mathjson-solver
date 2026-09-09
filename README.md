@@ -98,15 +98,15 @@ The library supports a comprehensive set of mathematical operations:
 * **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round, Floor, Ceil
 * **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan, Arctan2, Cot, Sec, Csc (+ inverses), Sinh, Cosh, Tanh, Coth, Sech, Csch (+ inverses), Hypot, Sinc
 * **Logarithms:** Log (base 10, or base b), Log2/Lb, Log10/Lg, Ln (natural log), LogOnePlus, Exp
-* **Comparison:** Equal, StrictEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual
-* **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In, NotIn, ContainsAnyOf, ContainsAllOf, ContainsNoneOf
-* **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Variance, StandardDeviation, Length/Count
+* **Comparison:** Equal, StrictEqual, IdenticallyEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual, Congruent
+* **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In/Element, NotIn/NotElement, ContainsAnyOf, ContainsAllOf, ContainsNoneOf, bare `True`/`False` literals, Union, Intersection, SetMinus, SymmetricDifference (over arrays - no dedicated Set type)
+* **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Mode, Variance, StandardDeviation, PopulationVariance, PopulationStandardDeviation, Quartiles, InterquartileRange, Covariance, Correlation, Length/Count
 * **Functional Programming:** Map/StrictMap, Reduce, Filter, Product (all also accept CortexJS calling conventions, including `Function` lambdas)
-* **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended, First, Last, Rest, Most, Reverse, Sort, Unique, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct
-* **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch-Case/Which, Constants definition
+* **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended/Append, First, Second, Third, Last, Rest, Most, Reverse, Sort, Unique, Dedup, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct, Take, Drop, TakeWhile, DropWhile, Contains, IndexOf, IndexWhere, Find, CountIf, Position, RotateLeft, RotateRight, MaxBy, MinBy, ArgMax, ArgMin, Ordering, FlatMap, Scan, Differences, Fold, Insert, DeleteAt, ReplaceAt, Partition, Chunk, GroupBy, ChunkBy, Tally
+* **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch/StrictSwitch (value-equality case dispatch), Which (CortexJS flat condition/value chain), Constants definition
 * **Type Conversion:** Int, Float, Str, IsDefined
 * **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
-* **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc
+* **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc, Rational, Numerator, Denominator, MachineEpsilon, CatalanConstant, EulerGamma
 * **Integration:** TrapezoidalIntegrate (requires numpy), Interp, FindIntervalIndex, Variable references
 * **Advanced:** HasMatchingSublist for pattern matching
 * **Constants:** Pi, Degrees, ExponentialE, GoldenRatio

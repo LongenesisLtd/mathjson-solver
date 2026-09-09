@@ -19,7 +19,8 @@ from mathjson_solver import create_solver
         ({}, ["List", 1, 2, 3], ["Array", 1, 2, 3]),
         ({}, ["Mean", ["Array", 2, 4, 6]], 4),
         ({}, ["Count", ["Array", 1, 2, 3]], 3),
-        ({"x": 2}, ["Which", "x", 0, [1, "a"], [2, "b"]], "b"),
+        ({"x": 2}, ["Which", ["Equal", "x", 1], "a", ["Equal", "x", 2], "b"], "b"),
+        ({"x": 5}, ["Which", ["Equal", "x", 1], "a", ["Equal", "x", 2], "b"], None),
         # --- Tier 2: trivial new implementations ---
         ({}, ["Chop", 1e-12], 0),
         ({}, ["Chop", 5], 5),
@@ -58,6 +59,8 @@ from mathjson_solver import create_solver
         ({}, ["Round", ["Variance", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3], 4.571),
         ({}, ["Round", ["Erf", 1], 3], 0.843),
         ({}, ["First", ["Array", 1, 2, 3]], 1),
+        ({}, ["Second", ["Array", 1, 2, 3]], 2),
+        ({}, ["Third", ["Array", 1, 2, 3]], 3),
         ({}, ["Last", ["Array", 1, 2, 3]], 3),
         ({}, ["Rest", ["Array", 1, 2, 3]], ["Array", 2, 3]),
         ({}, ["Most", ["Array", 1, 2, 3]], ["Array", 1, 2]),
@@ -81,8 +84,26 @@ from mathjson_solver import create_solver
         ),
         ({}, ["At", ["Array", 10, 20, 30], 1], 10),
         ({}, ["At", ["Array", 10, 20, 30], -1], 30),
+        # --- Boolean literals: bare "True"/"False" symbols, as CortexJS
+        # writes them, rather than native JSON true/false ---
+        ({}, "True", True),
+        ({}, "False", False),
+        ({}, ["Equal", "flag", "True"], False),  # "flag" is undefined -> the string "flag", not True
+        ({"flag": True}, ["Equal", "flag", "True"], True),
+        ({}, ["And", "True", "True"], True),
+        ({}, ["And", "True", "False"], False),
+        ({}, ["Not", "False"], True),
+        ({}, ["If", "True", "yes", "no"], "yes"),
+        ({}, ["If", "False", "yes", "no"], "no"),
     ],
 )
 def test_cortexjs_compat(parameters, expression, expected_result):
     solver = create_solver(parameters)
     assert solver(expression) == expected_result
+
+
+def test_true_false_literals_are_not_shadowable():
+    # "True"/"False" are reserved boolean literals, not solver-parameter
+    # references - a same-named parameter must not override them.
+    solver = create_solver({"True": "surprise"})
+    assert solver("True") is True
