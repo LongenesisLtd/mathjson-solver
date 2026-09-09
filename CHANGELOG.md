@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.1] - 2026-09-09
+
+### Fixed
+
+- **`Which` was aliased to the wrong construct.** It previously pointed at `Switch` (value-equality dispatch: `["Switch", expr, default, [case, val], ...]`), but CortexJS `Which` is a flat condition/value chain, `["Which", cond1, val1, cond2, val2, ...]`, equivalent in spirit to `If`'s pair form. `Which` now has its own implementation matching that signature, evaluating each `cond` in order and returning the `val` paired with the first truthy one, or `None` (CortexJS `Nothing`) if none match. This corrects silently-wrong results for any real CortexJS `Which` expression; if you were relying on the old `Switch`-shaped behavior, switch to `["Switch", ...]` directly.
+- **`requires-python` was stale.** It claimed `>=3.6`, but the code has used a bare `X | Y` union type annotation (no `from __future__ import annotations`) since before this release - that syntax needs Python 3.10+ and fails at import time on anything older - and CI has only ever tested 3.10/3.12. Corrected to `>=3.10` to match what's actually required and tested.
+
+### Added
+
+- **Bare `True`/`False` boolean literals.** CortexJS represents booleans as the symbols `"True"`/`"False"` (as opposed to native JSON `true`/`false`, which already evaluated correctly as Python `bool`, itself a `numbers.Number` subtype). These symbols now resolve to actual booleans - e.g. `["Equal", "flag", "True"]` compares against boolean `True` instead of the literal string `"True"`. They're treated as reserved literals: a solver parameter or local variable named `"True"`/`"False"` can no longer shadow them, and `extract_variables` no longer reports them as free variables to supply.
+- **CortexJS collection functions**, all operating on the existing `Array` representation and, where they take a function/predicate argument, accepting both the call-template and `Function`-lambda conventions already used by `Map`/`Filter`/`Reduce`:
+  - Slicing: `Take`, `Drop`, `TakeWhile`, `DropWhile`
+  - Searching: `Contains`, `IndexOf`, `IndexWhere`, `Find`, `CountIf`, `Position`
+  - Reordering: `RotateLeft`, `RotateRight`, `MaxBy`, `MinBy`, `ArgMax`, `ArgMin`, `Ordering`
+  - Transforming: `FlatMap`, `Scan`, `Differences`, `Fold` (function-first `Reduce`), `Dedup` (consecutive-only, unlike the existing `Unique`)
+  - Editing: `Append` (alias for the existing `Appended`), `Insert`, `DeleteAt`, `ReplaceAt`
+  - Grouping: `Partition` (fixed chunk size), `Chunk` (fixed group count), `GroupBy`, `ChunkBy`, `Tally`
+
+  Deliberately not included in this pass: the lazy/lookup-table collection types (`Set`, `Tuple`, `Dictionary`), which would need new data types rather than fitting the existing `Array` shape, and anything requiring unbounded iteration (`Cycle`, `Iterate`, arbitrary-size `Repeat`/`Linspace`/`Tabulate`), which is out of scope for a safe evaluator of untrusted expressions.
+- **Basic set algebra**, operating on the `Array` representation directly rather than requiring a dedicated `Set` type: `Union` and `Intersection` (variadic, deduplicated, order-preserving), `SetMinus` and `SymmetricDifference` (binary). Also `Element`/`NotElement`, CortexJS's names for the existing `In`/`Not_in` (`["Element", value, collection]`, matching mathematical `x ∈ S` order). Domain-membership sets (`RealNumbers`, `Integers`, etc.) and the rest of the `Set` reference page remain out of scope, as they need real domain-typing machinery, not just list operations.
+- **`Second`, `Third`**: fixed-position element access alongside the existing `First`/`Last`.
+- **Missing constants:** `MachineEpsilon` (`sys.float_info.epsilon`), `CatalanConstant`, `EulerGamma`.
+- **Stricter/modular relations:** `IdenticallyEqual` (like `StrictEqual`, but also requires the same Python type - `1` and `1.0` are `StrictEqual` but not `IdenticallyEqual`), `Congruent` (`["Congruent", a, b, modulus]`, i.e. `a ≡ b (mod modulus)`).
+- **`Rational`, `Numerator`, `Denominator`.** This solver has no dedicated rational-number type carried through arithmetic - everything downstream of `Rational` is a plain float, same as `Divide`. `Numerator`/`Denominator` read their argument's declared `n`/`d` exactly when it's an unevaluated `["Rational", n, d]` expression; otherwise (a plain number) they fall back to reconstructing the closest fraction with a bounded denominator via `fractions.Fraction` - a best-effort approximation, not exact/symbolic.
+- **More statistics:** `Mode`, `PopulationVariance`, `PopulationStandardDeviation`, `Quartiles`, `InterquartileRange`, `Covariance`, `Correlation` - all thin wrappers around `statistics.mode`/`pvariance`/`pstdev`/`quantiles`/`covariance`/`correlation`, same pattern as the existing `Variance`/`StandardDeviation`.
+
+[2.2.1]: https://github.com/LongenesisLtd/mathjson-solver/compare/v2.2.0...v2.2.1
+
 ## [2.2.0] - 2026-09-08
 
 ### Added
