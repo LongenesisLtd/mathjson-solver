@@ -4,7 +4,6 @@ from typing import Any as _Any
 from collections.abc import Callable, Iterable
 from functools import reduce
 import math
-from copy import deepcopy
 
 from ._common import comparison_safe_converter
 from ._exceptions import MathJSONExpression, MathJSONException
@@ -732,11 +731,9 @@ def create_mathjson_solver(
     blacklist = frozenset(blacklist) if blacklist else frozenset()
 
     def f(s, *args):
-        if args:
-            c = deepcopy(args[0])
-        else:
-            c = {}
-        #         c = deepcopy(kwargs.get("c", {}))
+        # Leaf values never touch `c` at all - check them before doing
+        # anything with it, since leaves vastly outnumber interior nodes
+        # in any real expression tree.
         if isinstance(s, numbers.Number):
             return s
         # CortexJS represents the boolean literals as the bare symbols
@@ -748,6 +745,16 @@ def create_mathjson_solver(
         # solver parameter or local variable.
         if s == "True" or s == "False":
             return s == "True"
+        # `c` is passed through by reference, not copied, here or at any
+        # of the call sites below - almost every construct only reads
+        # it. The few constructs that introduce new bindings (Constants,
+        # Reduce's legacy accumulator form, TrapezoidalIntegrate) are
+        # responsible for making their own `c = dict(c)` copy before
+        # writing into it, the same way `_apply_fn` already does for
+        # `Function` - so a written binding is visible to whatever that
+        # construct evaluates internally, but never leaks back into the
+        # caller's scope once the construct returns.
+        c = args[0] if args else {}
         if isinstance(s, list):
             if not s:
                 # Empty equation given - []

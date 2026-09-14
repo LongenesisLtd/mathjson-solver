@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [2.3.0] - Unreleased
 
+### Changed
+
+- The evaluator no longer copies its whole variable scope on every recursive evaluation step - only the constructs that actually introduce a new binding (`Constants`, `Reduce`'s legacy accumulator form, `TrapezoidalIntegrate`) copy it, and only their own copy. Measured 2-3x faster on arithmetic- and `Reduce`-heavy expressions; no behavior change.
+
 ### Fixed
 
 - **`extract_variables` treated unrecognized constructs' arguments as free variables.** `["Color", "red"]` would report `"red"` as a parameter to supply, even though it's a literal argument to a construct this solver doesn't implement - not a variable reference. `extract_variables` now mirrors `f()`'s own fallback for an unrecognized construct (return the expression unchanged, never evaluating or substituting into its arguments): it's treated as opaque data, contributing no free variables, rather than recursed into. Applies to any unimplemented construct (`Color`, `Quantity`, etc.), not just specific names. The same treatment was extended to `Head`/`Tail`/`Hold`/`IsSame`/`Same` (new in this release, see below), which likewise never evaluate their arguments.

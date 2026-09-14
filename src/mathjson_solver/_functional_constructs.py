@@ -120,6 +120,9 @@ def Reduce(f, c, solver_parameters, s):
     _index = s[6]
     name_index = _index[1]
 
+    # Bind into a copy, not the caller's `c` - see `f`'s own comment on
+    # this convention.
+    c = dict(c)
     c[name_accumulator] = initial_value
 
     for i, x in enumerate(the_list):
