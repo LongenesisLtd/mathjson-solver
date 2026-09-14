@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/mathjson-solver.svg)](https://pypi.org/project/mathjson-solver/)
 [![PyPI Downloads](https://static.pepy.tech/badge/mathjson-solver/month)](https://pepy.tech/projects/mathjson-solver)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 > **Heads up:** Version 2 introduces a breaking change (see [CHANGELOG.md](CHANGELOG.md)) as part of steering back towards greater compatibility with [CortexJS MathJSON](https://cortexjs.io/compute-engine/): `Log` is now log base 10 instead of natural log. Stuck on pre-2.0.0 expressions but want the functions added in 2.x? Pass `legacy_v1=True` to `create_solver()` (see [Migrating from 1.x](#migrating-from-1x)) instead of hand-migrating every expression. Bugfix releases for the 1.x line also continue on the [`1.x` branch](https://github.com/LongenesisLtd/mathjson-solver/tree/1.x).
 
@@ -115,7 +115,7 @@ A blacklisted name that isn't an actual construct (a typo, for instance) is sile
 
 ## Supported Operations
 
-The library supports a comprehensive set of mathematical operations:
+The library supports 330 MathJSON constructs, covering:
 
 * **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round, Floor, Ceil
 * **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan, Arctan2, Cot, Sec, Csc (+ inverses), Sinh, Cosh, Tanh, Coth, Sech, Csch (+ inverses), Hypot, Sinc
