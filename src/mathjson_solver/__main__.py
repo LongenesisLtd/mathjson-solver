@@ -20,6 +20,54 @@ from statistics import (
 )
 import datetime
 
+from ._common import (
+    is_numeric,
+    _try_parse_datetime,
+    has_matching_sublist,
+    comparison_safe_converter,
+    comparison_safe_converter_for_pairs,
+)
+from ._array_helpers import (
+    _MultiplyByScalar,
+    _MultiplyByArray,
+    _AddScalar,
+    _SubtractScalar,
+    _AddArray,
+    _SubtractArray,
+    _CumulativeProduct,
+    _CumulativeSum,
+)
+from ._interpolation import (
+    find_interpolation_bounds_indexes,
+    find_interpolation_bounds_2indexes,
+    linear_interpolate,
+)
+from ._number_theory import (
+    _MAX_NUMBER_THEORY_MAGNITUDE,
+    _MAX_NTH_PRIME,
+    _MAX_PRIME_PI,
+    _is_prime,
+    _factor_integer,
+    _divisors,
+    _totient,
+    _integer_nth_root,
+    _is_perfect_power,
+    _extended_gcd,
+    _carmichael_lambda,
+    _jacobi_symbol,
+    _multiplicative_order,
+    _primitive_root,
+    _chinese_remainder,
+    _lucas_l,
+    _bernoulli,
+    _continued_fraction,
+    _from_continued_fraction,
+    _digits_in_base,
+    _is_figurate,
+)
+from ._special_functions import _erf_inv, _lambert_w, _agm, _elliptic_k_e
+from ._combinatorics import _subfactorial, _bell_number
+
 NUMPY_AVAILABLE = False
 try:
     import numpy as np
@@ -54,8 +102,6 @@ _MAX_STRING_REPEAT_LENGTH = 100_000
 # vector the same way an unbounded string length is above.
 _MAX_POLYFIT_DEGREE = 50
 
-NoneType = type(None)
-
 # A MathJSON expression, in this solver's list-based (not dictionary-
 # based) representation: a literal (string, number, bool, or None), or
 # a compound expression - a list whose first element is a construct
@@ -68,133 +114,6 @@ NoneType = type(None)
 # compiled regex pattern, ...) and stay untyped rather than annotate
 # each one with `Any` for no real type-safety benefit.
 MathJSONExpression: TypeAlias = Union[str, int, float, bool, None, list["MathJSONExpression"]]
-
-
-def _try_parse_datetime(value):
-    """Try to parse a string as datetime or date. Returns original value if not parseable."""
-    if isinstance(value, (datetime.datetime, datetime.date)):
-        return value
-    if isinstance(value, str):
-        try:
-            return datetime.datetime.fromisoformat(value)
-        except ValueError:
-            pass
-        try:
-            return datetime.date.fromisoformat(value)
-        except ValueError:
-            pass
-    return value
-
-
-# def find_interpolation_bounds(
-#     l: list, target: int | float
-# ) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
-#     for i, x in enumerate(l):
-#         if i == 0:
-#             continue
-#         if l[i - 1] <= target and target <= l[i]:
-#             if target == l[i - 1] or target == l[i]:
-#                 return target
-#             else:
-#                 return l[i - 1], l[i]
-#     else:
-#         raise ValueError("Target value is outside interpolation range.")
-
-
-def _MultiplyByScalar(l: list[numbers.Real], a: numbers.Real) -> list[numbers.Real]:
-    return [x * a for x in l]
-
-
-def _MultiplyByArray(
-    l1: list[numbers.Real], l2: list[numbers.Real]
-) -> list[numbers.Real]:
-    return [a * b for a, b in zip(l1, l2)]
-
-
-def _AddScalar(l: list[numbers.Real], a: numbers.Real) -> list[numbers.Real]:
-    return [x + a for x in l]
-
-
-def _SubtractScalar(l: list[numbers.Real], a: numbers.Real) -> list[numbers.Real]:
-    return [x - a for x in l]
-
-
-def _AddArray(l1: list[numbers.Real], l2: list[numbers.Real]) -> list[numbers.Real]:
-    return [a + b for a, b in zip(l1, l2)]
-
-
-def _SubtractArray(
-    l1: list[numbers.Real], l2: list[numbers.Real]
-) -> list[numbers.Real]:
-    return [a - b for a, b in zip(l1, l2)]
-
-
-def _CumulativeProduct(l: list) -> list:
-    res = []
-    for i, x in enumerate(l):
-        if i == 0:
-            res.append(x)
-        else:
-            res.append(reduce(lambda a, b: a * b, l[: i + 1]))
-    return res
-
-
-def _CumulativeSum(l: list) -> list:
-    res = []
-    for i, x in enumerate(l):
-        if i == 0:
-            res.append(x)
-        else:
-            res.append(reduce(lambda a, b: a + b, l[: i + 1]))
-    return res
-
-
-def find_interpolation_bounds_indexes(
-    l: list, target: int | float
-) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
-    for i, x in enumerate(l):
-        if i == 0:
-            continue
-        if l[i - 1] <= target and target <= l[i]:
-            if target == l[i - 1]:
-                return i - 1
-            elif target == l[i]:
-                return i
-            else:
-                return i - 1, i
-    else:
-        raise ValueError("Target value is outside interpolation range.")
-
-
-def find_interpolation_bounds_2indexes(
-    l: list, target: int | float
-) -> Union[Union[int, float], tuple[Union[int, float], Union[int, float]]]:
-    for i, x in enumerate(l):
-        if i == len(l) - 1:
-            return i - 1, i
-        if l[i] <= target and target < l[i + 1]:
-            return i, i + 1
-    else:
-        raise ValueError("Target value is outside interpolation range.")
-
-
-def linear_interpolate(x_array, y_array, target_x):
-    # Find the interval where target_x falls
-    # Handle edge cases (target_x outside range)
-    # Apply: y = y1 + (y2 - y1) * (target_x - x1) / (x2 - x1)
-
-    # first check if both arrays are the same length
-    if len(x_array) != len(y_array) or len(x_array) < 2:
-        raise ValueError(
-            "Both arrays need to be the same length and with at least 2 elements."
-        )
-    bounds_indexes = find_interpolation_bounds_indexes(x_array, target_x)
-    if isinstance(bounds_indexes, tuple):
-        x1, x2 = x_array[bounds_indexes[0]], x_array[bounds_indexes[1]]
-        y1, y2 = y_array[bounds_indexes[0]], y_array[bounds_indexes[1]]
-        return y1 + (y2 - y1) * (target_x - x1) / (x2 - x1)
-    else:
-        return y_array[bounds_indexes]
 
 
 class MathJSONException(Exception):
@@ -231,502 +150,6 @@ class MathJSONException(Exception):
 #             raise ValueError(f"'{func.__name__}' really should receive a list")
 
 #     return inner1
-
-
-def is_numeric(x):
-    try:
-        float(x)
-    except ValueError:
-        return False
-    except TypeError:
-        return False
-    else:
-        return True
-
-
-def _is_prime(n) -> bool:
-    n = int(n)
-    if n < 2:
-        return False
-    if n == 2:
-        return True
-    if n % 2 == 0:
-        return False
-    return all(n % i for i in range(3, int(n**0.5) + 1, 2))
-
-
-# --- Number theory helpers -------------------------------------------
-#
-# _is_prime, _factor_integer and _divisors are all trial-division based
-# (O(sqrt(n))) - fine for everyday inputs, but a ~15+ digit number makes
-# a single call noticeably slow (empirically: ~0.3s at 10**14, and it
-# grows with sqrt(n), so ~3s at 10**16, ~30s at 10**18). Every
-# construct built on them below caps its integer input at
-# _MAX_NUMBER_THEORY_MAGNITUDE to keep worst-case latency low.
-# `IsPrime`/`_is_prime` itself predates this and has no such cap - a
-# pre-existing gap, not introduced here; left alone rather than
-# silently changing already-shipped behavior.
-_MAX_NUMBER_THEORY_MAGNITUDE = 10**12
-
-# NthPrime/NextPrime search forward one candidate at a time; empirically
-# NthPrime(10_000) ~ 0.1s and NthPrime(100_000) ~ 3.4s, so the *count*
-# of primes to advance through needs its own (smaller) cap, separate
-# from the starting-value magnitude cap above.
-_MAX_NTH_PRIME = 10_000
-
-# PrimePi checks every integer up to n, so its cost scales with n
-# itself (not just sqrt(n)) - empirically ~0.1s at 100_000.
-_MAX_PRIME_PI = 100_000
-
-
-def _factor_integer(n):
-    n = int(n)
-    if n < 1:
-        raise ValueError("Factorization requires a positive integer.")
-    if n > _MAX_NUMBER_THEORY_MAGNITUDE:
-        raise ValueError(
-            f"Factorization is limited to integers up to "
-            f"{_MAX_NUMBER_THEORY_MAGNITUDE} (trial division is too slow "
-            f"beyond that)."
-        )
-    factors = []
-    d = 2
-    while d * d <= n:
-        if n % d == 0:
-            exp = 0
-            while n % d == 0:
-                n //= d
-                exp += 1
-            factors.append((d, exp))
-        d += 1
-    if n > 1:
-        factors.append((n, 1))
-    return factors
-
-
-def _divisors(n):
-    n = int(n)
-    if n < 1:
-        raise ValueError("Divisors requires a positive integer.")
-    if n > _MAX_NUMBER_THEORY_MAGNITUDE:
-        raise ValueError(
-            f"Divisors is limited to integers up to "
-            f"{_MAX_NUMBER_THEORY_MAGNITUDE} (trial division is too slow "
-            f"beyond that)."
-        )
-    small, large = [], []
-    d = 1
-    while d * d <= n:
-        if n % d == 0:
-            small.append(d)
-            if d != n // d:
-                large.append(n // d)
-        d += 1
-    return sorted(small + large)
-
-
-def _totient(n):
-    n = int(n)
-    if n < 1:
-        raise ValueError("'Totient' requires a positive integer.")
-    result = n
-    for p, _ in _factor_integer(n):
-        result -= result // p
-    return result
-
-
-def _integer_nth_root(n, k):
-    """Exact integer k-th root of n via binary search (no float error)."""
-    if n < 0:
-        raise ValueError("Integer root requires a non-negative integer.")
-    if n == 0:
-        return 0
-    lo, hi = 0, 1
-    while hi**k <= n:
-        hi *= 2
-    while lo < hi:
-        mid = (lo + hi + 1) // 2
-        if mid**k <= n:
-            lo = mid
-        else:
-            hi = mid - 1
-    return lo
-
-
-def _is_perfect_power(n):
-    n = int(n)
-    if n < 2:
-        return False
-    for k in range(2, n.bit_length() + 1):
-        root = _integer_nth_root(n, k)
-        if root >= 2 and root**k == n:
-            return True
-    return False
-
-
-def _extended_gcd(a, b):
-    old_r, r = int(a), int(b)
-    old_s, s = 1, 0
-    old_t, t = 0, 1
-    while r != 0:
-        q = old_r // r
-        old_r, r = r, old_r - q * r
-        old_s, s = s, old_s - q * s
-        old_t, t = t, old_t - q * t
-    return old_r, old_s, old_t  # (gcd, x, y) such that a*x + b*y = gcd(a, b)
-
-
-def _carmichael_lambda(n):
-    n = int(n)
-    if n < 1:
-        raise ValueError("'CarmichaelLambda' requires a positive integer.")
-    if n == 1:
-        return 1
-
-    def prime_power_lambda(p, e):
-        if p == 2 and e >= 3:
-            return 2 ** (e - 2)
-        return (p - 1) * p ** (e - 1)
-
-    result = 1
-    for p, e in _factor_integer(n):
-        result = math.lcm(result, prime_power_lambda(p, e))
-    return result
-
-
-def _jacobi_symbol(a, n):
-    n = int(n)
-    if n <= 0 or n % 2 == 0:
-        raise ValueError("requires an odd, positive modulus")
-    a = int(a) % n
-    result = 1
-    while a != 0:
-        while a % 2 == 0:
-            a //= 2
-            if n % 8 in (3, 5):
-                result = -result
-        a, n = n, a
-        if a % 4 == 3 and n % 4 == 3:
-            result = -result
-        a %= n
-    return result if n == 1 else 0
-
-
-def _multiplicative_order(a, n):
-    a, n = int(a), int(n)
-    if math.gcd(a, n) != 1:
-        raise ValueError("'MultiplicativeOrder' requires gcd(a, n) = 1.")
-    k, val = 1, a % n
-    while val != 1:
-        val = (val * a) % n
-        k += 1
-    return k
-
-
-def _primitive_root(n):
-    n = int(n)
-    phi = sum(1 for k in range(1, n) if math.gcd(k, n) == 1)
-    for g in range(1, n):
-        if math.gcd(g, n) == 1 and _multiplicative_order(g, n) == phi:
-            return g
-    raise ValueError(f"No primitive root exists modulo {n}.")
-
-
-def _chinese_remainder(remainders, moduli):
-    total_modulus = math.prod(moduli)
-    result = 0
-    for r, m in zip(remainders, moduli):
-        Mi = total_modulus // m
-        result += r * Mi * pow(Mi, -1, m)
-    return result % total_modulus
-
-
-def _lucas_l(n):
-    a, b = 2, 1
-    for _ in range(int(n)):
-        a, b = b, a + b
-    return a
-
-
-def _bernoulli(n):
-    """
-    Exact n-th Bernoulli number via the Akiyama-Tanigawa algorithm, using
-    the modern B1 = -1/2 convention (matching Mathematica and most
-    contemporary sources - the alternative B1 = +1/2 convention exists
-    too, differing only at n=1; the algorithm below naturally produces
-    +1/2, flipped here to match the more common convention).
-    """
-    n = int(n)
-    if n < 0:
-        raise ValueError("'BernoulliB' requires a non-negative integer.")
-    A = [Fraction(1, m + 1) for m in range(n + 1)]
-    for m in range(n + 1):
-        for j in range(m, 0, -1):
-            A[j - 1] = j * (A[j - 1] - A[j])
-    result = A[0]
-    return -result if n == 1 else result
-
-
-def _continued_fraction(x, max_terms=20, blowup_threshold=1e6):
-    """
-    Continued-fraction expansion of `x`. `blowup_threshold` guards
-    against floating-point noise: past a certain number of terms, a
-    double's finite precision is exhausted and further terms become
-    numerically meaningless (huge, essentially random integers) rather
-    than real information about `x` - detected here as an implausibly
-    large next term, and the expansion stopped there instead of
-    emitting garbage.
-
-    Note: a finite continued fraction has two equally valid
-    representations differing only in the last term (`[..., a]` and
-    `[..., a - 1, 1]` are the same value) - which one comes out depends
-    on where the expansion happens to terminate, not a bug.
-    """
-    terms = []
-    for _ in range(max_terms):
-        if abs(x) > blowup_threshold:
-            break
-        a = math.floor(x)
-        terms.append(a)
-        frac = x - a
-        if abs(frac) < 1e-12:
-            break
-        x = 1 / frac
-    return terms
-
-
-def _from_continued_fraction(terms):
-    result = Fraction(int(terms[-1]))
-    for a in reversed(terms[:-1]):
-        result = int(a) + 1 / result
-    return result
-
-
-def _digits_in_base(n, base):
-    n = abs(int(n))
-    base = int(base)
-    if base < 2:
-        raise ValueError("Base must be at least 2.")
-    if n == 0:
-        return [0]
-    digits = []
-    while n:
-        n, rem = divmod(n, base)
-        digits.append(rem)
-    return list(reversed(digits))
-
-
-def _is_figurate(n, formula, k_min=0):
-    """
-    Whether `n` equals `formula(k)` for some integer `k >= k_min`.
-    `formula` must be non-decreasing for `k >= k_min`. Uses binary
-    search rather than solving `formula` symbolically, so it works for
-    any such formula without per-shape algebra.
-    """
-    n = int(n)
-    if n < formula(k_min):
-        return False
-    lo, hi = k_min, k_min + 1
-    while formula(hi) < n:
-        hi *= 2
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if formula(mid) < n:
-            lo = mid + 1
-        else:
-            hi = mid
-    return formula(lo) == n
-
-
-# --- Special functions -------------------------------------------------
-
-
-def _erf_inv(x):
-    """Inverse error function via Newton's method against math.erf."""
-    if not (-1 < x < 1):
-        raise ValueError("'ErfInv' is only defined for -1 < x < 1.")
-    guess = x
-    for _ in range(50):
-        error = math.erf(guess) - x
-        derivative = 2 / math.sqrt(math.pi) * math.exp(-(guess**2))
-        guess -= error / derivative
-    return guess
-
-
-def _lambert_w(x):
-    """
-    Principal (real) branch of the Lambert W function via Halley's
-    iteration. Verified against known reference values: W(0)=0, W(e)=1,
-    W(1)≈0.5671432904097838 (the Omega constant), W(-1/e)=-1.
-    """
-    if x < -1 / math.e:
-        raise ValueError("'LambertW' has no real solution for x < -1/e.")
-    w = math.log(x) - math.log(math.log(x)) if x > math.e else x / (1 + x)
-    for _ in range(100):
-        ew = math.exp(w)
-        residual = w * ew - x
-        wp1 = w + 1
-        denom = ew * wp1 - (w + 2) * residual / (2 * wp1)
-        if denom == 0:
-            break
-        w -= residual / denom
-    return w
-
-
-def _agm(a, b, tol=1e-15):
-    a, b = float(a), float(b)
-    while abs(a - b) > tol:
-        a, b = (a + b) / 2, math.sqrt(a * b)
-    return a
-
-
-def _elliptic_k_e(m, tol=1e-15):
-    """
-    Complete elliptic integrals of the first and second kind, K(m) and
-    E(m), via the AGM - "parameter" convention (m = k^2), not the
-    "modulus" convention K(k)/E(k) some sources use. Verified against
-    known reference values: K(0)=E(0)=pi/2, and at m=0.5 (the
-    lemniscate-constant case), K≈1.8540746773013719,
-    E≈1.3506438810476755.
-    """
-    if not (0 <= m <= 1):
-        raise ValueError("'EllipticK'/'EllipticE' require 0 <= m <= 1.")
-    a, b, csum = 1.0, math.sqrt(1 - m), m
-    power_of_2 = 1
-    c = math.sqrt(m)
-    while abs(c) > tol:
-        a, b, c = (a + b) / 2, math.sqrt(a * b), (a - b) / 2
-        power_of_2 *= 2
-        csum += power_of_2 * c * c
-    k = math.pi / (2 * a)
-    e = k * (1 - csum / 2)
-    return k, e
-
-
-# --- Combinatorics -------------------------------------------------
-
-
-def _subfactorial(n):
-    """Derangement count !n, via the standard recurrence."""
-    n = int(n)
-    if n < 0:
-        raise ValueError("'Subfactorial' requires a non-negative integer.")
-    result = 1
-    for k in range(1, n + 1):
-        result = k * result + (-1) ** k
-    return result
-
-
-def _bell_number(n):
-    """n-th Bell number, via the Bell triangle."""
-    n = int(n)
-    if n < 0:
-        raise ValueError("'BellNumber' requires a non-negative integer.")
-    row = [1]
-    for _ in range(n):
-        new_row = [row[-1]]
-        for x in row:
-            new_row.append(new_row[-1] + x)
-        row = new_row
-    return row[0]
-
-
-def has_matching_sublist(
-    *,
-    my_list: list,
-    required_match_count: int,
-    position: int,
-    contiguous: bool,
-    conditions: list[bool],
-) -> bool:
-    if contiguous:
-        # Check for contiguous matches based on position
-        if position == 0:
-            # Check if the beginning of the list matches
-            count = sum(
-                1
-                for i in range(min(required_match_count, len(my_list)))
-                if conditions[i]
-            )
-            return count == required_match_count
-        elif position > 0:
-            # Skip the first `position` elements
-            count = sum(
-                1
-                for i in range(position, position + required_match_count)
-                if i < len(my_list) and conditions[i]
-            )
-            return count == required_match_count
-        elif position == -1:
-            # Check if the end of the list matches
-            count = sum(
-                1
-                for i in range(len(my_list) - required_match_count, len(my_list))
-                if conditions[i]
-            )
-            return count == required_match_count
-        elif position < -1:
-            # Skip the last `abs(position)` elements
-            count = sum(1 for i in range(len(my_list) + position) if conditions[i])
-            return count == required_match_count
-    else:
-        # Check for non-contiguous matches
-        count = sum(1 for i in range(len(my_list)) if conditions[i])
-        return count >= required_match_count
-
-
-# def has_sublist2(
-#     *,
-#     my_list: list,
-#     required_match_count: int,
-#     position: int,
-#     contiguous: bool,
-#     condition: callable,
-# ) -> bool:
-#     if contiguous:
-#         # Check for contiguous matches based on position
-#         if position == 0:
-#             # Check if the beginning of the list matches
-#             count = sum(1 for x in my_list[:required_match_count] if condition(x))
-#             return count == required_match_count
-#         elif position > 0:
-#             # Skip the first `position` elements
-#             count = sum(
-#                 1
-#                 for x in my_list[position : position + required_match_count]
-#                 if condition(x)
-#             )
-#             return count == required_match_count
-#         elif position == -1:
-#             # Check if the end of the list matches
-#             count = sum(1 for x in my_list[-required_match_count:] if condition(x))
-#             return count == required_match_count
-#         elif position < -1:
-#             # Skip the last `abs(position)` elements
-#             count = sum(1 for x in my_list[:position] if condition(x))
-#             return count == required_match_count
-#     else:
-#         # Check for non-contiguous matches
-#         count = sum(1 for x in my_list if condition(x))
-#         return count >= required_match_count
-
-
-def comparison_safe_converter(x):
-    if type(x) in [bool, NoneType]:  # bool before int (bool IS an int in Python)
-        return "1" if x else "0"
-    elif type(x) in [int, float, str]:
-        return f"{x}"
-    return x
-
-
-def comparison_safe_converter_for_pairs(
-    v1, v2
-) -> (Union[str, float], Union[str, float]):
-    if is_numeric(v1):
-        v1 = float(v1)
-    if is_numeric(v2):
-        v2 = float(v2)
-    return v1, v2
 
 
 def translate_v1_mathjson(expr: MathJSONExpression) -> MathJSONExpression:
