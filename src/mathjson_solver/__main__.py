@@ -1,6 +1,8 @@
 import numbers
 import sys
-from typing import Union, Any
+import itertools
+from typing import Union, Any, TypeAlias
+from collections.abc import Callable, Iterable
 from functools import reduce
 from fractions import Fraction
 import math
@@ -53,6 +55,19 @@ _MAX_STRING_REPEAT_LENGTH = 100_000
 _MAX_POLYFIT_DEGREE = 50
 
 NoneType = type(None)
+
+# A MathJSON expression, in this solver's list-based (not dictionary-
+# based) representation: a literal (string, number, bool, or None), or
+# a compound expression - a list whose first element is a construct
+# name and whose remaining elements are themselves MathJSONExpression
+# values (e.g. ["Add", 1, ["Multiply", 2, "x"]]). Used only for the
+# small public API surface (`create_solver`, `extract_variables`,
+# `translate_v1_mathjson`) - the ~300 per-construct functions inside
+# `create_mathjson_solver` all take/return arbitrary runtime values
+# (a construct can produce a `Fraction`, a `datetime.timedelta`, a
+# compiled regex pattern, ...) and stay untyped rather than annotate
+# each one with `Any` for no real type-safety benefit.
+MathJSONExpression: TypeAlias = Union[str, int, float, bool, None, list["MathJSONExpression"]]
 
 
 def _try_parse_datetime(value):
@@ -185,13 +200,19 @@ def linear_interpolate(x_array, y_array, target_x):
 class MathJSONException(Exception):
     """Exception for MathJSON processing issues"""
 
-    def __init__(self, e, expr, *args, **kwargs):
+    def __init__(
+        self,
+        e: Exception,
+        expr: MathJSONExpression,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(args)
         self.e = e
         self.expr = expr
         self.construct = kwargs.get("mathjson_construct", "MathJSON")
 
-    def __str__(self):
+    def __str__(self) -> str:
         if hasattr(self.e, "message"):
             m = self.e.message
         else:
@@ -517,6 +538,99 @@ def _is_figurate(n, formula, k_min=0):
     return formula(lo) == n
 
 
+# --- Special functions -------------------------------------------------
+
+
+def _erf_inv(x):
+    """Inverse error function via Newton's method against math.erf."""
+    if not (-1 < x < 1):
+        raise ValueError("'ErfInv' is only defined for -1 < x < 1.")
+    guess = x
+    for _ in range(50):
+        error = math.erf(guess) - x
+        derivative = 2 / math.sqrt(math.pi) * math.exp(-(guess**2))
+        guess -= error / derivative
+    return guess
+
+
+def _lambert_w(x):
+    """
+    Principal (real) branch of the Lambert W function via Halley's
+    iteration. Verified against known reference values: W(0)=0, W(e)=1,
+    W(1)≈0.5671432904097838 (the Omega constant), W(-1/e)=-1.
+    """
+    if x < -1 / math.e:
+        raise ValueError("'LambertW' has no real solution for x < -1/e.")
+    w = math.log(x) - math.log(math.log(x)) if x > math.e else x / (1 + x)
+    for _ in range(100):
+        ew = math.exp(w)
+        residual = w * ew - x
+        wp1 = w + 1
+        denom = ew * wp1 - (w + 2) * residual / (2 * wp1)
+        if denom == 0:
+            break
+        w -= residual / denom
+    return w
+
+
+def _agm(a, b, tol=1e-15):
+    a, b = float(a), float(b)
+    while abs(a - b) > tol:
+        a, b = (a + b) / 2, math.sqrt(a * b)
+    return a
+
+
+def _elliptic_k_e(m, tol=1e-15):
+    """
+    Complete elliptic integrals of the first and second kind, K(m) and
+    E(m), via the AGM - "parameter" convention (m = k^2), not the
+    "modulus" convention K(k)/E(k) some sources use. Verified against
+    known reference values: K(0)=E(0)=pi/2, and at m=0.5 (the
+    lemniscate-constant case), K≈1.8540746773013719,
+    E≈1.3506438810476755.
+    """
+    if not (0 <= m <= 1):
+        raise ValueError("'EllipticK'/'EllipticE' require 0 <= m <= 1.")
+    a, b, csum = 1.0, math.sqrt(1 - m), m
+    power_of_2 = 1
+    c = math.sqrt(m)
+    while abs(c) > tol:
+        a, b, c = (a + b) / 2, math.sqrt(a * b), (a - b) / 2
+        power_of_2 *= 2
+        csum += power_of_2 * c * c
+    k = math.pi / (2 * a)
+    e = k * (1 - csum / 2)
+    return k, e
+
+
+# --- Combinatorics -------------------------------------------------
+
+
+def _subfactorial(n):
+    """Derangement count !n, via the standard recurrence."""
+    n = int(n)
+    if n < 0:
+        raise ValueError("'Subfactorial' requires a non-negative integer.")
+    result = 1
+    for k in range(1, n + 1):
+        result = k * result + (-1) ** k
+    return result
+
+
+def _bell_number(n):
+    """n-th Bell number, via the Bell triangle."""
+    n = int(n)
+    if n < 0:
+        raise ValueError("'BellNumber' requires a non-negative integer.")
+    row = [1]
+    for _ in range(n):
+        new_row = [row[-1]]
+        for x in row:
+            new_row.append(new_row[-1] + x)
+        row = new_row
+    return row[0]
+
+
 def has_matching_sublist(
     *,
     my_list: list,
@@ -615,7 +729,7 @@ def comparison_safe_converter_for_pairs(
     return v1, v2
 
 
-def translate_v1_mathjson(expr):
+def translate_v1_mathjson(expr: MathJSONExpression) -> MathJSONExpression:
     """
     Rewrite a MathJSON expression written for mathjson-solver < 2.0.0 so it
     evaluates to the same result on >= 2.0.0.
@@ -637,7 +751,32 @@ def translate_v1_mathjson(expr):
     return expr
 
 
-def create_mathjson_solver(solver_parameters, legacy_v1=False):
+def create_mathjson_solver(
+    solver_parameters: dict[str, MathJSONExpression],
+    legacy_v1: bool = False,
+    blacklist: Iterable[str] | None = None,
+) -> Callable[[MathJSONExpression], Any]:
+    """
+    `blacklist`, if given, is an iterable of construct names (e.g.
+    `["PowerSet", "Permutations"]`) that this solver instance refuses to
+    evaluate - deployments can disable individual constructs they don't
+    want available for their expression sources, independent of what
+    the library implements. Attempting to use a blacklisted construct
+    raises `MathJSONException` (wrapping `PermissionError`) rather than
+    evaluating it or silently ignoring it. A name that isn't an actual
+    construct has no effect (not validated against the known-construct
+    list - a deliberate simplicity trade-off, not an oversight).
+
+    This is a resource/access *policy* control, not a substitute for a
+    construct being safe to run at all - e.g. the combinatorial
+    enumeration functions (`PowerSet`, `Permutations`, `Combinations`,
+    `CartesianProduct`) have no built-in output-size limit, so a
+    deployment accepting untrusted expressions should blacklist them
+    (or any other construct it doesn't want exposed) rather than assume
+    every construct is safe by default for every threat model.
+    """
+    blacklist = frozenset(blacklist) if blacklist else frozenset()
+
     def f(s, *args):
         if args:
             c = deepcopy(args[0])
@@ -1548,6 +1687,163 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                     seen.add(n)
                     n = sum(int(d) ** 2 for d in str(n))
                 return n == 1
+
+            # --- Special functions ---
+
+            def Beta(s):
+                a, b = f(s[1], c), f(s[2], c)
+                return math.gamma(a) * math.gamma(b) / math.gamma(a + b)
+
+            def Factorial2(s):
+                n = int(f(s[1], c))
+                result = 1
+                while n > 1:
+                    result *= n
+                    n -= 2
+                return result
+
+            def ErfInv(s):
+                return _erf_inv(f(s[1], c))
+
+            def LambertW(s):
+                return _lambert_w(f(s[1], c))
+
+            def AGM(s):
+                return _agm(f(s[1], c), f(s[2], c))
+
+            def EllipticK(s):
+                return _elliptic_k_e(f(s[1], c))[0]
+
+            def EllipticE(s):
+                return _elliptic_k_e(f(s[1], c))[1]
+
+            # --- Combinatorics (trivial subset - no explosion risk) ---
+
+            def Fibonacci(s):
+                n = int(f(s[1], c))
+                a, b = 0, 1
+                for _ in range(n):
+                    a, b = b, a + b
+                return a
+
+            def Multinomial(s):
+                ks = [int(k) for k in _arr_vals(s)]
+                return math.factorial(sum(ks)) // math.prod(
+                    math.factorial(k) for k in ks
+                )
+
+            def Subfactorial(s):
+                return _subfactorial(f(s[1], c))
+
+            def BellNumber(s):
+                return _bell_number(f(s[1], c))
+
+            # --- Combinatorics: enumeration (no output-size limit - see
+            # create_mathjson_solver's `blacklist` parameter to disable
+            # these for untrusted expression sources) ---
+
+            def PowerSet(s):
+                """
+                ["PowerSet", array]
+                All subsets of `array` (including the empty set and the
+                full set itself), as an array of arrays. No output-size
+                limit: a set of n elements has 2^n subsets.
+                """
+                vals = _arr_vals(s)
+                result = ["Array"]
+                for r in range(len(vals) + 1):
+                    for combo in itertools.combinations(vals, r):
+                        result.append(["Array"] + list(combo))
+                return result
+
+            def Permutations(s):
+                """
+                ["Permutations", array] or ["Permutations", array, k]
+                All ordered arrangements of `k` elements from `array`
+                (default k = len(array)), as an array of arrays. No
+                output-size limit.
+                """
+                vals = _arr_vals(s)
+                k = int(f(s[2], c)) if len(s) > 2 else len(vals)
+                return ["Array"] + [
+                    ["Array"] + list(p) for p in itertools.permutations(vals, k)
+                ]
+
+            def Combinations(s):
+                """
+                ["Combinations", array, k]
+                All unordered k-element subsets of `array`, as an array
+                of arrays. No output-size limit.
+                """
+                vals = _arr_vals(s)
+                k = int(f(s[2], c))
+                return ["Array"] + [
+                    ["Array"] + list(combo) for combo in itertools.combinations(vals, k)
+                ]
+
+            def CartesianProduct(s):
+                """
+                ["CartesianProduct", array1, array2, ...]
+                All ordered tuples with one element drawn from each
+                array, as an array of arrays. No output-size limit: the
+                result has len(array1) * len(array2) * ... elements.
+                """
+                lists = [_arr_vals_of(arg) for arg in s[1:]]
+                return ["Array"] + [
+                    ["Array"] + list(combo) for combo in itertools.product(*lists)
+                ]
+
+            # --- Core: structural introspection ---
+            #
+            # Unlike almost everything else on CortexJS's Core reference
+            # page (CAS functions, mutable state, LaTeX serialization -
+            # all out of scope, see docs), these don't need a type
+            # system or a rendering surface: they work directly on the
+            # raw, unevaluated MathJSON tree every construct already
+            # receives as `s`, the same mechanism RegExp already uses to
+            # peek at its pattern argument without evaluating it.
+
+            def Head(s):
+                expr = s[1]
+                return expr[0] if isinstance(expr, list) and expr else None
+
+            def Tail(s):
+                expr = s[1]
+                return ["Array"] + expr[1:] if isinstance(expr, list) else ["Array"]
+
+            def Hold(s):
+                return s[1]
+
+            def Type(s):
+                value = f(s[1], c)
+                if isinstance(value, bool):
+                    return "boolean"
+                if isinstance(value, numbers.Number):
+                    return "number"
+                if isinstance(value, str):
+                    return "string"
+                if isinstance(value, list) and value and value[0] == "Array":
+                    return "array"
+                if value is None:
+                    return "nothing"
+                return type(value).__name__
+
+            def IsSame(s):
+                """
+                ["IsSame", expr1, expr2]
+                Whether expr1 and expr2 are structurally identical *as
+                written* - same shape, literals, and order - compared
+                without evaluating either side. Distinct from `Equal`/
+                `StrictEqual` (which compare evaluated *values*) and
+                from `IdenticallyEqual` (a stricter same-type
+                `StrictEqual`, also over evaluated values): this is a
+                pre-evaluation, syntactic check. CortexJS distinguishes
+                `IsSame` from `Same` by canonical-form normalization
+                (e.g. treating `x+y` and `y+x` as the same); this solver
+                has no such canonicalization step, so both map to the
+                same plain structural comparison here.
+                """
+                return s[1] == s[2]
 
             def Variance(s):
                 return variance(_arr_vals(s))
@@ -3135,6 +3431,34 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "IsPerfect": IsPerfect,
                 "IsAbundant": IsAbundant,
                 "IsHappy": IsHappy,
+                # --- Special functions ---
+                "Gamma": lambda s: math.gamma(f(s[1], c)),
+                "GammaLn": lambda s: math.lgamma(f(s[1], c)),
+                "Beta": Beta,
+                "Factorial2": Factorial2,
+                "ErfInv": ErfInv,
+                "LambertW": LambertW,
+                "AGM": AGM,
+                "EllipticK": EllipticK,
+                "EllipticE": EllipticE,
+                # --- Combinatorics (trivial subset) ---
+                "Choose": lambda s: math.comb(int(f(s[1], c)), int(f(s[2], c))),
+                "Fibonacci": Fibonacci,
+                "Multinomial": Multinomial,
+                "Subfactorial": Subfactorial,
+                "BellNumber": BellNumber,
+                "PowerSet": PowerSet,
+                "Permutations": Permutations,
+                "Combinations": Combinations,
+                "CartesianProduct": CartesianProduct,
+                # --- Core: structural introspection ---
+                "Head": Head,
+                "Tail": Tail,
+                "Hold": Hold,
+                "Identity": lambda s: f(s[1], c),
+                "Type": Type,
+                "IsSame": IsSame,
+                "Same": IsSame,  # see IsSame's docstring for the distinction CortexJS draws
                 # --- Boolean logic ---
                 "Xor": lambda s: bool(f(s[1], c)) ^ bool(f(s[2], c)),
                 "Nand": lambda s: not all(f(x, c) for x in s[1:]),
@@ -3211,6 +3535,14 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 # Empty equation given - []
                 return None
             if s[0] in constructs:
+                if s[0] in blacklist:
+                    raise MathJSONException(
+                        PermissionError(
+                            f"'{s[0]}' has been disabled in this solver instance."
+                        ),
+                        s,
+                        mathjson_construct=s[0],
+                    )
                 try:
                     return constructs[s[0]](s)
 
@@ -3254,7 +3586,9 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
     return f
 
 
-def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set):
+def extract_variables(
+    s: MathJSONExpression, li: set[str], ignore_list: set[str]
+) -> set[str]:
     constructs = [
         "Add",
         "Sum",
@@ -3475,6 +3809,31 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "IsPerfect",
         "IsAbundant",
         "IsHappy",
+        "Gamma",
+        "GammaLn",
+        "Beta",
+        "Factorial2",
+        "ErfInv",
+        "LambertW",
+        "AGM",
+        "EllipticK",
+        "EllipticE",
+        "Choose",
+        "Fibonacci",
+        "Multinomial",
+        "Subfactorial",
+        "BellNumber",
+        "PowerSet",
+        "Permutations",
+        "Combinations",
+        "CartesianProduct",
+        "Head",
+        "Tail",
+        "Hold",
+        "Identity",
+        "Type",
+        "IsSame",
+        "Same",
         "Xor",
         "Nand",
         "Nor",
@@ -3589,6 +3948,16 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
             ignore_list.add("_")
             if len(s) > 1:
                 li.update(extract_variables(s[1], li, ignore_list))
+        elif s[0] in ("Head", "Tail", "Hold", "IsSame", "Same"):
+            # These deliberately never evaluate their arguments either
+            # (Head/Tail/Hold work on the raw, unevaluated expression
+            # tree; IsSame/Same do a pure structural comparison of the
+            # two raw trees) - same reasoning as the unrecognized-
+            # construct case below, just for constructs that *are*
+            # recognized. A bare name inside their arguments is never
+            # resolved as a parameter reference, so it's not a free
+            # variable to supply.
+            pass
         elif s[0] not in constructs:
             # Unrecognized construct (e.g. "Color", "Quantity" - anything
             # this solver doesn't implement): f() never evaluates or

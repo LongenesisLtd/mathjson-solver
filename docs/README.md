@@ -5,17 +5,20 @@
 1. [Basic Arithmetic](#basic-arithmetic)
 2. [Mathematical Functions](#mathematical-functions)
 3. [Number Theory](#number-theory)
-4. [Comparison Operations](#comparison-operations)
-5. [Control Flow](#control-flow)
-6. [Arrays and Aggregation](#arrays-and-aggregation)
-7. [Boolean and Set Operations](#boolean-and-set-operations)
-8. [Type Conversion](#type-conversion)
-9. [Date and Time Functions](#date-and-time-functions)
-10. [Trigonometric Functions](#trigonometric-functions)
-11. [Advanced Functions](#advanced-functions)
-12. [String Functions](#string-functions)
-13. [Pattern Matching](#pattern-matching)
-14. [Integration Functions](#integration-functions)
+4. [Special Functions](#special-functions)
+5. [Combinatorics](#combinatorics)
+6. [Core](#core)
+7. [Comparison Operations](#comparison-operations)
+8. [Control Flow](#control-flow)
+9. [Arrays and Aggregation](#arrays-and-aggregation)
+10. [Boolean and Set Operations](#boolean-and-set-operations)
+11. [Type Conversion](#type-conversion)
+12. [Date and Time Functions](#date-and-time-functions)
+13. [Trigonometric Functions](#trigonometric-functions)
+14. [Advanced Functions](#advanced-functions)
+15. [String Functions](#string-functions)
+16. [Pattern Matching](#pattern-matching)
+17. [Integration Functions](#integration-functions)
 
 ---
 
@@ -424,6 +427,167 @@ operating on a digit *array* instead of a string, in a given base
 `RandomPrime` - same reasoning as `Random`/`RandomChoice`/`RandomSample`
 throughout this solver: nondeterminism undermines reproducible formula
 evaluation.
+
+---
+
+## Special Functions
+
+### Gamma, GammaLn, Beta, Factorial2
+`Gamma`/`GammaLn` are thin wrappers around `math.gamma`/`math.lgamma`.
+`Beta` is built from `Gamma`. `Factorial2` is the double factorial
+(product of integers of the same parity as `n`, down to 1 or 2).
+
+```python
+["Gamma", 5]                       # 24.0  (Gamma(n) = (n-1)! for positive integers)
+["Round", ["Beta", 2, 3], 4]       # 0.0833  (Γ(2)Γ(3)/Γ(5))
+["Factorial2", 7]                  # 105  (7·5·3·1)
+["Factorial2", 8]                  # 384  (8·6·4·2)
+```
+
+### ErfInv, LambertW, AGM, EllipticK, EllipticE
+Iterative algorithms verified against known reference values before
+shipping - no new dependency needed. `EllipticK`/`EllipticE` use the
+"parameter" convention `K(m)`/`E(m)` (`m = k²`), not
+the "modulus" convention `K(k)`/`E(k)` some sources use, and are only
+defined for `0 ≤ m ≤ 1`. `LambertW` is the principal (real) branch,
+defined for `x ≥ -1/e`.
+
+```python
+["Round", ["ErfInv", 0.5], 5]      # 0.47694
+["Round", ["LambertW", 1], 5]      # 0.56714  (the "Omega constant")
+["Round", ["AGM", 1, 2], 5]        # 1.45679  (arithmetic-geometric mean)
+["Round", ["EllipticK", 0.5], 5]   # 1.85407
+["Round", ["EllipticE", 0.5], 5]   # 1.35064
+```
+
+### Deliberately excluded
+`BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi` (and their
+derivatives), `JacobiTheta`, `DedekindEta`, `Zeta`, `GammaRegularized`,
+`BetaRegularized` - these need real numerical algorithms (stable
+series/asymptotic-expansion switching depending on argument regime) to
+not be subtly wrong across their domain. Doing them properly means
+depending on `scipy`, a materially heavier dependency than `numpy`/
+`google-re2` - a separate dependency conversation, not a default
+inclusion.
+
+---
+
+## Combinatorics
+
+```python
+["Choose", 5, 2]                   # 10  (alias for the existing Binomial)
+["Fibonacci", 10]                  # 55
+["Multinomial", ["Array", 2, 3, 4]]  # 1260  (9! / (2!·3!·4!))
+["Subfactorial", 4]                # 9   (derangements of 4 elements)
+["BellNumber", 5]                  # 52  (ways to partition a 5-element set)
+```
+
+### PowerSet, Permutations, Combinations, CartesianProduct
+Enumeration functions - each returns an array of arrays. **None of
+these have a built-in output-size limit**: a set of `n` elements has
+2ⁿ subsets, `n!` permutations, etc., so an innocuous-looking input
+(`["PowerSet", ["Range", 30]]`) can already mean materializing over a
+billion elements. If you're evaluating expressions from a source you
+don't fully trust, disable these via `create_solver`'s `blacklist`
+parameter (see the top-level README's "Restricting Available
+Functions") rather than assuming they're safe against arbitrary input.
+
+```python
+["PowerSet", ["Array", 1, 2, 3]]
+  # ["Array", ["Array"], ["Array",1], ["Array",2], ["Array",3],
+  #   ["Array",1,2], ["Array",1,3], ["Array",2,3], ["Array",1,2,3]]
+
+["Permutations", ["Array", 1, 2, 3]]        # all 3! = 6 orderings
+["Permutations", ["Array", 1, 2, 3], 2]     # all 3·2 = 6 length-2 orderings
+["Combinations", ["Array", 1, 2, 3], 2]     # ["Array", ["Array",1,2], ["Array",1,3], ["Array",2,3]]
+["CartesianProduct", ["Array", 1, 2], ["Array", "a", "b"]]
+  # ["Array", ["Array",1,"a"], ["Array",1,"b"], ["Array",2,"a"], ["Array",2,"b"]]
+```
+
+---
+
+## Core
+
+Structural introspection of the raw, unevaluated MathJSON tree - unlike
+almost everything else on CortexJS's Core reference page (a
+computer-algebra system, mutable state, LaTeX serialization - all out
+of scope, see below), these don't need a type system or a rendering
+surface.
+
+### Head and Tail
+The operator name and argument list of a compound expression -
+inspected *without evaluating* the expression. `["Head", expr]` returns
+`None` if `expr` isn't a compound (list) expression; `["Tail", expr]`
+returns `["Array"]`.
+
+```python
+["Head", ["Add", 1, 2]]            # "Add"
+["Tail", ["Add", 1, 2]]            # ["Array", 1, 2]
+```
+
+### Hold
+Returns its argument completely unevaluated - the raw expression tree,
+not its value.
+
+```python
+["Hold", ["Add", 1, 2]]            # ["Add", 1, 2]  (not 3.0)
+```
+
+### Identity
+Returns its argument's evaluated value unchanged - unlike `Hold`, this
+*does* evaluate it.
+
+```python
+["Identity", 42]                   # 42
+["Identity", ["Add", 1, 2]]        # 3.0
+```
+
+### Type
+The runtime kind of an expression's evaluated value: `"number"`,
+`"string"`, `"boolean"`, `"array"`, `"nothing"` (for `None`), or a raw
+Python type name for anything else.
+
+```python
+["Type", 5]                        # "number"
+["Type", "hello"]                  # "string"
+["Type", ["Array", 1, 2]]          # "array"
+```
+
+### IsSame and Same
+Whether two expressions are structurally identical *as written* - same
+shape, literals, and order - compared without evaluating either side.
+Distinct from `Equal`/`StrictEqual` (which compare evaluated *values*)
+and from the existing `IdenticallyEqual` (a stricter same-type
+`StrictEqual`, also over evaluated values): this is a pre-evaluation,
+syntactic check. CortexJS distinguishes `IsSame` from `Same` by
+canonical-form normalization (e.g. treating `x+y` and `y+x` as
+equivalent); this solver has no such normalization step, so both names
+map to the same plain structural comparison here.
+
+```python
+["IsSame", ["Add", 1, 2], ["Add", 1, 2]]  # True
+["IsSame", ["Add", 1, 2], ["Add", 2, 1]]  # False (different order, even though equal when evaluated)
+```
+
+### Deliberately excluded
+- **CAS functions**: `Evaluate`, `Expand`, `ExpandAll`, `Factor`,
+  `Together`, `Simplify`, `Solve`, `CanonicalForm`, `N`,
+  `InverseFunction`, `Typed`, `DeclareType` - need a real
+  computer-algebra system.
+- **Mutable-state functions**: `Declare`, `Assign`, `Assume`,
+  `HoldValues` - introduce statement sequencing and rebindable state
+  into what's currently a pure expression tree.
+- **LaTeX functions**: `Parse`, `Latex`, `LatexString`, `Subscript`,
+  `Subminus`/`Subplus`/`Substar`,
+  `Superdagger`/`Superminus`/`Superplus`/`Superstar` - presentation
+  hints with no rendering surface in this solver.
+- **`Error`/`IsError`** - CortexJS's in-tree error-tagging model. This
+  solver already has a different, established error model
+  (`MathJSONException`, raised as a Python exception) - not a gap, a
+  different valid design already in place.
+- **`Symbol`** - dynamically builds a symbol/identifier from
+  concatenated string arguments. Low value given this solver already
+  resolves bare-string parameter references directly.
 
 ---
 
@@ -1922,6 +2086,21 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [ContinuedFraction, FromContinuedFraction](#continuedfraction-and-fromcontinuedfraction) - Continued fractions
 - [IntegerDigits, DigitCount, DigitSum, FromDigits](#integerdigits-digitcount-digitsum-fromdigits) - Digit manipulation (array form)
 - [IsSquare, IsTriangular, IsPentagonal, IsOctahedral, IsCenteredSquare, IsPerfect, IsAbundant, IsHappy](#figurate-numbers-and-other-predicates) - Figurate numbers and other predicates
+
+### Special Functions
+- [Gamma, GammaLn, Beta, Factorial2](#gamma-gammaln-beta-factorial2) - Gamma-based functions
+- [ErfInv, LambertW, AGM, EllipticK, EllipticE](#erfinv-lambertw-agm-elliptick-elliptice) - Verified iterative algorithms
+
+### Combinatorics
+- [Choose, Fibonacci, Multinomial, Subfactorial, BellNumber](#combinatorics) - Counting functions with no explosion risk
+- [PowerSet, Permutations, Combinations, CartesianProduct](#powerset-permutations-combinations-cartesianproduct) - Enumeration functions (no output-size limit - see `blacklist` in the top-level README)
+
+### Core
+- [Head, Tail](#head-and-tail) - Operator name / argument list of a compound expression
+- [Hold](#hold) - Return an argument unevaluated
+- [Identity](#identity) - Return an argument's evaluated value unchanged
+- [Type](#type) - Runtime kind of an evaluated value
+- [IsSame, Same](#issame-and-same) - Structural (pre-evaluation) equality
 
 ### Comparison Operations
 - [Equal](#equality) - Flexible equality (bool/int aware)
