@@ -36,6 +36,8 @@ pip install mathjson-solver
 - `pip install mathjson-solver[regex]` (installs [google-re2](https://pypi.org/project/google-re2/); only required for `RegExp`/`IsMatch`/`StringMatch`/`StringMatchAll`)
 - `pip install mathjson-solver[special-functions]` (installs [scipy](https://scipy.org/); required for `BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi`/`AiryAiPrime`/`AiryBiPrime`, `Zeta`, `GammaRegularized`, `BetaRegularized`, and `CDF`/`Quantile` on `BinomialDistribution`/`PoissonDistribution`)
 
+Combine any of these by separating them with commas in one `pip install`, e.g. `pip install mathjson-solver[integration,regex,special-functions]` for all three at once.
+
 ## Quick Start
 
 ```python
