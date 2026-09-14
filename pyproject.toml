@@ -26,6 +26,11 @@ integration = ["numpy"]
 # solver that evaluates untrusted expressions with no execution budget
 # of its own. Optional, same as `integration` above.
 regex = ["google-re2"]
+# Bessel/Airy/Zeta/GammaRegularized/BetaRegularized need scipy.special -
+# real numerical algorithms (stable series/asymptotic-expansion
+# switching depending on argument regime), not something to reimplement
+# from scratch. Optional, same as `integration`/`regex` above.
+special-functions = ["scipy"]
 
 [project.urls]
 Homepage = "https://github.com/LongenesisLtd/mathjson-solver"

@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pytest pytest-cov google-re2 numpy
+          pip install pytest pytest-cov google-re2 numpy scipy
 
       - name: Run pytest, then run again with Coverage
         run: |
