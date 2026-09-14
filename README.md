@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/mathjson-solver.svg)](https://pypi.org/project/mathjson-solver/)
 [![PyPI Downloads](https://static.pepy.tech/badge/mathjson-solver/month)](https://pepy.tech/projects/mathjson-solver)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 > **Heads up:** Version 2 introduces a breaking change (see [CHANGELOG.md](CHANGELOG.md)) as part of steering back towards greater compatibility with [CortexJS MathJSON](https://cortexjs.io/compute-engine/): `Log` is now log base 10 instead of natural log. Stuck on pre-2.0.0 expressions but want the functions added in 2.x? Pass `legacy_v1=True` to `create_solver()` (see [Migrating from 1.x](#migrating-from-1x)) instead of hand-migrating every expression. Bugfix releases for the 1.x line also continue on the [`1.x` branch](https://github.com/LongenesisLtd/mathjson-solver/tree/1.x).
 
@@ -115,32 +115,19 @@ A blacklisted name that isn't an actual construct (a typo, for instance) is sile
 
 ## Supported Operations
 
-The library supports a comprehensive set of mathematical operations:
+330 MathJSON constructs across arithmetic, trigonometry, logarithms, comparisons, logic and sets, statistics and probability distributions, functional programming (Map/Reduce/Filter), arrays and collections, control flow, strings and RE2-backed pattern matching, date/time, number theory, special functions (Bessel/Airy/Gamma/elliptic-integral/hypergeometric families), combinatorics, and structural introspection.
 
-* **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round, Floor, Ceil
-* **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan, Arctan2, Cot, Sec, Csc (+ inverses), Sinh, Cosh, Tanh, Coth, Sech, Csch (+ inverses), Hypot, Sinc
-* **Logarithms:** Log (base 10, or base b), Log2/Lb, Log10/Lg, Ln (natural log), LogOnePlus, Exp
-* **Comparison:** Equal, StrictEqual, IdenticallyEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual, Congruent
-* **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In/Element, NotIn/NotElement, ContainsAnyOf, ContainsAllOf, ContainsNoneOf, bare `True`/`False` literals, Union, Intersection, SetMinus, SymmetricDifference (over arrays - no dedicated Set type)
-* **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Mode, Variance, StandardDeviation, PopulationVariance, PopulationStandardDeviation, Quartiles, InterquartileRange, Covariance, Correlation, Skewness, Kurtosis, LinearRegression, PolynomialFit, Length/Count
-* **Probability Distributions:** NormalDistribution, BinomialDistribution, PoissonDistribution, UniformDistribution, ExponentialDistribution, queried via PDF, CDF, Quantile (e.g. `["CDF", ["NormalDistribution", 0, 1], 1.5]`). No optional dependency needed for PDF on any distribution, or for CDF/Quantile on Normal/Uniform/Exponential — only Binomial/Poisson's CDF and Quantile require the `special-functions` extra
-* **Functional Programming:** Map/StrictMap, Reduce, Filter, Product (all also accept CortexJS calling conventions, including `Function` lambdas)
-* **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended/Append, First, Second, Third, Last, Rest, Most, Reverse, Sort, Unique, Dedup, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct, Take, Drop, TakeWhile, DropWhile, Contains, IndexOf, IndexWhere, Find, CountIf, Position, RotateLeft, RotateRight, MaxBy, MinBy, ArgMax, ArgMin, Ordering, FlatMap, Scan, Differences, Fold, Insert, DeleteAt, ReplaceAt, Partition, Chunk, GroupBy, ChunkBy, Tally
-* **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch/StrictSwitch (value-equality case dispatch), Which (CortexJS flat condition/value chain), Constants definition
-* **Type Conversion:** Int, Float, Str, IsDefined
-* **Strings:** String, StringJoin, ToUpperCase, ToLowerCase, CaseFold, Trim, TrimStart, TrimEnd, StringSplit, StringReplace, StringCompare, StringRepeat, PadStart, PadEnd, Characters/GraphemeClusters, Utf8, Utf16, UnicodeScalars, StringFrom, IntegerString, DigitsFrom, NumberFrom
-* **Pattern Matching (requires the optional `regex` extra, `pip install mathjson-solver[regex]`):** RegExp, IsMatch, StringMatch, StringMatchAll — backed by [RE2](https://github.com/google/re2) rather than Python's `re`, for a hard guarantee against catastrophic backtracking (no backreferences/lookaround, as a deliberate trade-off for that guarantee)
-* **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
-* **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc, Rational, Numerator, Denominator, MachineEpsilon, CatalanConstant, EulerGamma, PowerMod, ModularInverse, IntegerSqrt, FactorInteger, PrimeFactors, PrimeNu, PrimeOmega, Radical, IsSquareFree, Divisors, Sigma0, Sigma1, SigmaMinus1, DivisorSigma, Divides, Totient, IsPerfectPower, NthPrime, NextPrime, PrimePi, ExtendedGCD, ChineseRemainder, CarmichaelLambda, JacobiSymbol, LegendreSymbol, MultiplicativeOrder, PrimitiveRoot, LucasL, CatalanNumber, BernoulliB, ContinuedFraction, FromContinuedFraction, IntegerDigits, DigitCount, DigitSum, FromDigits, IsSquare, IsTriangular, IsPentagonal, IsOctahedral, IsCenteredSquare, IsPerfect, IsAbundant, IsHappy
-* **Special Functions:** Gamma, GammaLn, Beta, Factorial2, ErfInv, LambertW, AGM, EllipticK, EllipticE, Hypergeometric1F1, Hypergeometric2F1
-* **Special Functions (requires the optional `special-functions` extra, `pip install mathjson-solver[special-functions]`):** BesselJ, BesselY, BesselI, BesselK, AiryAi, AiryBi, AiryAiPrime, AiryBiPrime, Zeta, GammaRegularized, BetaRegularized — backed by [scipy](https://scipy.org/)
-* **Combinatorics:** Choose, Fibonacci, Multinomial, Subfactorial, BellNumber, PowerSet, Permutations, Combinations, CartesianProduct (the last four have no output-size limit - see [Restricting Available Functions](#restricting-available-functions))
-* **Core (structural introspection):** Head, Tail, Hold, Identity, Type, IsSame, Same
-* **Integration (requires the optional `integration` extra, `pip install mathjson-solver[integration]`):** TrapezoidalIntegrate. Also in this group but with no extra dependency: Interp, FindIntervalIndex, Variable references
-* **Advanced:** HasMatchingSublist for pattern matching
-* **Constants:** Pi, Degrees, ExponentialE, GoldenRatio
+```python
+["Add", 1, 2, ["Multiply", 3, 4]]                # 15
+["CDF", ["NormalDistribution", 0, 1], 1.96]      # 0.975 (z-score to percentile)
+["Reduce", ["Array", 1, 2, 3, 4], ["Add"]]       # 10
+["StringMatch", "patient-042", "[0-9]+"]         # "042" at position 9-11
+["FactorInteger", 360]                           # [[2,3], [3,2], [5,1]]  (2³·3²·5)
+```
 
-[View complete documentation with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
+Three optional extras unlock specific functions — see [Installation](#installation) above: `regex` (RE2-backed pattern matching), `integration` (`TrapezoidalIntegrate`), `special-functions` (Bessel/Airy/Zeta/regularized gamma and beta, plus `CDF`/`Quantile` on the two discrete probability distributions).
+
+[View the complete function reference with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
 
 ## Error Handling
 
@@ -166,11 +153,15 @@ except MathJSONException as e:
 
 ## Use Cases
 
+**The core pattern:** if your Python backend accepts user-provided datapoints *and* user-provided math to apply to them, mathjson-solver is the engine for that — it evaluates the formula without needing to trust either the formula's author or the data's source. A survey platform is a natural fit: a survey and its "calculated answers" both come from the same untrusted party (the survey builder), the calculation runs against whatever the respondent enters, and the result has to be safe to compute no matter what either of them contains. The same shape covers pricing rules, scoring algorithms, and scientific or medical calculators wherever the formula itself isn't fixed at development time — for example, a breast-cancer risk calculator implementing the Gail model, numerical integration included, entirely in MathJSON.
+
 * **Dynamic Formulas:** Let users create custom calculations in web applications
 * **Scientific Computing:** Evaluate mathematical models with variable parameters
 * **Business Logic:** Process complex pricing rules or scoring algorithms
 * **Data Processing:** Apply mathematical transformations to datasets
 * **Health Applications:** Calculate medical scores, dosages, or risk assessments
+
+**What's still missing:** a ready-to-use, user-facing editor for authoring MathJSON itself — today, the expressions have to come from somewhere else (a form builder, a generated JSON structure, hand-written JSON). CortexJS ships [MathLive's mathfield](https://mathlive.io/mathfield/) for entering math, but it's built for typing LaTeX-style notation (e-learning quizzes, scientific computing, calculators) — not for assembling a formula that references named fields from a form. Worth evaluating on its own merits rather than assumed to transfer.
 
 ## Testing
 
