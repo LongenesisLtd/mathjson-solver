@@ -15,6 +15,18 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+# TrapezoidalIntegrate is the only construct that needs numpy; every
+# other construct works with no optional dependencies installed at all.
+integration = ["numpy"]
+# RegExp/IsMatch/StringMatch/StringMatchAll use RE2 rather than Python's
+# `re`: RE2 guarantees linear-time matching (no catastrophic
+# backtracking possible, by construction), at the cost of not
+# supporting backreferences or lookaround - a deliberate trade-off for a
+# solver that evaluates untrusted expressions with no execution budget
+# of its own. Optional, same as `integration` above.
+regex = ["google-re2"]
+
 [project.urls]
 Homepage = "https://github.com/LongenesisLtd/mathjson-solver"
 "Bug Tracker" = "https://github.com/LongenesisLtd/mathjson-solver/issues"

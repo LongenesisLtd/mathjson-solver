@@ -28,9 +28,11 @@ A reliable Python library for numerically evaluating mathematical expressions in
 pip install mathjson-solver
 ```
 
-**Requirements:** Python 3.7+
+**Requirements:** Python 3.10+
 
-**Optional:** numpy (only required for `TrapezoidalIntegrate` function)
+**Optional:**
+- `pip install mathjson-solver[integration]` (installs numpy; only required for `TrapezoidalIntegrate`)
+- `pip install mathjson-solver[regex]` (installs [google-re2](https://pypi.org/project/google-re2/); only required for `RegExp`/`IsMatch`/`StringMatch`/`StringMatchAll`)
 
 ## Quick Start
 
@@ -105,9 +107,11 @@ The library supports a comprehensive set of mathematical operations:
 * **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended/Append, First, Second, Third, Last, Rest, Most, Reverse, Sort, Unique, Dedup, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct, Take, Drop, TakeWhile, DropWhile, Contains, IndexOf, IndexWhere, Find, CountIf, Position, RotateLeft, RotateRight, MaxBy, MinBy, ArgMax, ArgMin, Ordering, FlatMap, Scan, Differences, Fold, Insert, DeleteAt, ReplaceAt, Partition, Chunk, GroupBy, ChunkBy, Tally
 * **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch/StrictSwitch (value-equality case dispatch), Which (CortexJS flat condition/value chain), Constants definition
 * **Type Conversion:** Int, Float, Str, IsDefined
+* **Strings:** String, StringJoin, ToUpperCase, ToLowerCase, CaseFold, Trim, TrimStart, TrimEnd, StringSplit, StringReplace, StringCompare, StringRepeat, PadStart, PadEnd, Characters/GraphemeClusters, Utf8, Utf16, UnicodeScalars, StringFrom, IntegerString, DigitsFrom, NumberFrom
+* **Pattern Matching (requires the optional `regex` extra, `pip install mathjson-solver[regex]`):** RegExp, IsMatch, StringMatch, StringMatchAll — backed by [RE2](https://github.com/google/re2) rather than Python's `re`, for a hard guarantee against catastrophic backtracking (no backreferences/lookaround, as a deliberate trade-off for that guarantee)
 * **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
 * **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc, Rational, Numerator, Denominator, MachineEpsilon, CatalanConstant, EulerGamma
-* **Integration:** TrapezoidalIntegrate (requires numpy), Interp, FindIntervalIndex, Variable references
+* **Integration (requires the optional `integration` extra, `pip install mathjson-solver[integration]`):** TrapezoidalIntegrate. Also in this group but with no extra dependency: Interp, FindIntervalIndex, Variable references
 * **Advanced:** HasMatchingSublist for pattern matching
 * **Constants:** Pi, Degrees, ExponentialE, GoldenRatio
 
