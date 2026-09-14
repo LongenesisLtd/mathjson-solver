@@ -4,17 +4,18 @@
 
 1. [Basic Arithmetic](#basic-arithmetic)
 2. [Mathematical Functions](#mathematical-functions)
-3. [Comparison Operations](#comparison-operations)
-4. [Control Flow](#control-flow)
-5. [Arrays and Aggregation](#arrays-and-aggregation)
-6. [Boolean and Set Operations](#boolean-and-set-operations)
-7. [Type Conversion](#type-conversion)
-8. [Date and Time Functions](#date-and-time-functions)
-9. [Trigonometric Functions](#trigonometric-functions)
-10. [Advanced Functions](#advanced-functions)
-11. [String Functions](#string-functions)
-12. [Pattern Matching](#pattern-matching)
-13. [Integration Functions](#integration-functions)
+3. [Number Theory](#number-theory)
+4. [Comparison Operations](#comparison-operations)
+5. [Control Flow](#control-flow)
+6. [Arrays and Aggregation](#arrays-and-aggregation)
+7. [Boolean and Set Operations](#boolean-and-set-operations)
+8. [Type Conversion](#type-conversion)
+9. [Date and Time Functions](#date-and-time-functions)
+10. [Trigonometric Functions](#trigonometric-functions)
+11. [Advanced Functions](#advanced-functions)
+12. [String Functions](#string-functions)
+13. [Pattern Matching](#pattern-matching)
+14. [Integration Functions](#integration-functions)
 
 ---
 
@@ -225,6 +226,11 @@ Returns the smallest integer greater than or equal to the given number.
 
 ### Number Theory and Special Functions
 
+*(The basics below have lived here since early on; the much larger
+number-theory batch - factorization, modular arithmetic, prime lookups,
+figurate-number predicates, and more - has its own [Number
+Theory](#number-theory) section further down.)*
+
 ```python
 ["Chop", 1e-12]                   # 0 (values with |x| < 1e-10 collapse to 0)
 ["Chop", 5]                       # 5
@@ -259,6 +265,165 @@ This solver has no dedicated rational-number type carried through arithmetic - `
 ["Numerator", 0.75]                # 3 (reconstructed from the float)
 ["Denominator", 0.75]              # 4
 ```
+
+---
+
+## Number Theory
+
+Several of these functions use trial division (`FactorInteger`,
+`Divisors`, and everything built on them) or a forward search
+(`NthPrime`, `NextPrime`, `PrimePi`) - fine for everyday integers, but
+slow at very large magnitudes. Each is capped: factorization-based
+functions and `NextPrime`'s starting value at `10**12`, `NthPrime`'s `n`
+and `NextPrime`'s `k` at `10,000`, and `PrimePi`'s `n` at `100,000` -
+picked from actual timing (worst case comfortably under half a second).
+
+### PowerMod, ModularInverse, IntegerSqrt
+Thin wrappers around Python's own `pow(a, b, m)`, `pow(a, -1, m)`, and
+`math.isqrt`.
+
+```python
+["PowerMod", 4, 13, 497]           # 445
+["ModularInverse", 3, 11]          # 4  (3 * 4 = 12 ≡ 1 mod 11)
+["IntegerSqrt", 50]                # 7  (largest integer m with m² ≤ 50)
+```
+
+### FactorInteger, PrimeFactors, PrimeNu, PrimeOmega, Radical, IsSquareFree
+All built on the same trial-division factorization. `FactorInteger`
+returns `[prime, exponent]` pairs; `PrimeFactors` just the distinct
+primes; `PrimeNu`/`PrimeOmega` count factors without and with
+multiplicity (ω(n) and Ω(n)); `Radical` is the product of distinct
+prime factors; `IsSquareFree` tests for repeated factors.
+
+```python
+["FactorInteger", 360]             # ["Array", ["Array", 2, 3], ["Array", 3, 2], ["Array", 5, 1]]
+["PrimeFactors", 360]              # ["Array", 2, 3, 5]
+["PrimeNu", 360]                   # 3
+["PrimeOmega", 360]                # 6  (2³·3²·5¹ → 3+2+1)
+["Radical", 360]                   # 30  (2·3·5)
+["IsSquareFree", 360]              # False (2³·3² has repeated factors)
+["IsSquareFree", 30]               # True (2·3·5, all distinct)
+```
+
+### Divisors, Sigma0, Sigma1, SigmaMinus1, DivisorSigma
+`Divisors` lists all positive divisors; `Sigma0` counts them; `Sigma1`
+sums them; `SigmaMinus1` sums their reciprocals (exact, via
+`fractions.Fraction`); `DivisorSigma` generalizes to Σdᵏ for any `k`.
+
+```python
+["Divisors", 28]                   # ["Array", 1, 2, 4, 7, 14, 28]
+["Sigma0", 28]                     # 6
+["Sigma1", 28]                     # 56
+["SigmaMinus1", 6]                 # 2  (1 + 1/2 + 1/3 + 1/6)
+["DivisorSigma", 28, 2]            # 1050  (sum of squares of divisors)
+```
+
+### Divides and Totient
+```python
+["Divides", 4, 28]                 # True  (4 divides 28)
+["Divides", 5, 28]                 # False
+["Totient", 36]                    # 12  (Euler's φ: count of integers ≤ 36 coprime to 36)
+```
+
+### IsPerfectPower
+Whether `n = a^b` for some integers `a, b ≥ 2`. Uses exact integer
+roots (binary search), not floating-point `**(1/b)`, to stay correct
+for large `n`.
+
+```python
+["IsPerfectPower", 27]             # True (3³)
+["IsPerfectPower", 15]             # False
+```
+
+### NthPrime, NextPrime, PrimePi
+`NthPrime` is 1-indexed (`NthPrime(1) = 2`). `NextPrime` finds the
+smallest prime greater than `n`, or the `k`-th such prime. `PrimePi` is
+the prime-counting function π(n).
+
+```python
+["NthPrime", 10]                   # 29
+["NextPrime", 10]                  # 11
+["NextPrime", 10, 3]               # 17  (3rd prime after 10: 11, 13, 17)
+["PrimePi", 100]                   # 25  (25 primes ≤ 100)
+```
+
+### ExtendedGCD and ChineseRemainder
+`ExtendedGCD` returns `["Array", gcd, x, y]` such that `a·x + b·y =
+gcd(a, b)`. `ChineseRemainder` solves a system of congruences (moduli
+must be pairwise coprime).
+
+```python
+["ExtendedGCD", 35, 15]            # ["Array", 5, 1, -2]  (35·1 + 15·-2 = 5)
+["ChineseRemainder", ["Array", 2, 3, 2], ["Array", 3, 5, 7]]  # 23
+```
+
+### CarmichaelLambda, JacobiSymbol, LegendreSymbol, MultiplicativeOrder, PrimitiveRoot
+```python
+["CarmichaelLambda", 561]          # 80  (561 = 3·11·17 is the smallest Carmichael number)
+["JacobiSymbol", 2, 7]             # 1
+["LegendreSymbol", 3, 7]           # -1  (LegendreSymbol is JacobiSymbol restricted to a prime modulus)
+["MultiplicativeOrder", 3, 7]      # 6   (3 is a primitive root mod 7)
+["PrimitiveRoot", 7]               # 3   (smallest primitive root)
+```
+
+### LucasL, CatalanNumber, BernoulliB
+`BernoulliB` returns exact rationals (via `fractions.Fraction`), using
+the **B₁ = -1/2** convention (matching Mathematica and most modern
+sources - the alternative B₁ = +1/2 convention exists too, differing
+only at n=1).
+
+```python
+["LucasL", 4]                      # 7  (Lucas sequence: 2, 1, 3, 4, 7, 11, 18, ...)
+["CatalanNumber", 4]               # 14
+["BernoulliB", 1]                  # -1/2
+["BernoulliB", 4]                  # -1/30
+```
+
+### ContinuedFraction and FromContinuedFraction
+`["ContinuedFraction", x]` or `["ContinuedFraction", x, max_terms]`
+(default 20). Stops early if the expansion terminates, or if a term
+becomes implausibly large - past a certain point a `float`'s precision
+is exhausted and further terms would just be numerical noise, not real
+information about `x`. A finite continued fraction has two equally
+valid representations differing only in the last term (`[..., a]` and
+`[..., a - 1, 1]` are the same value); which one comes out depends on
+where the expansion happens to terminate.
+
+```python
+["ContinuedFraction", 22 / 7]      # ["Array", 3, 7]
+["FromContinuedFraction", ["Array", 3, 7, 15, 1]]  # 355/113 (a famous rational approximation of π)
+```
+
+### IntegerDigits, DigitCount, DigitSum, FromDigits
+Siblings of [`IntegerString`/`DigitsFrom`](#integerstring-digitsfrom-numberfrom),
+operating on a digit *array* instead of a string, in a given base
+(default 10).
+
+```python
+["IntegerDigits", 12345]           # ["Array", 1, 2, 3, 4, 5]
+["IntegerDigits", 255, 16]         # ["Array", 15, 15]
+["DigitCount", 12345]              # 5
+["DigitSum", 12345]                # 15
+["FromDigits", ["Array", 1, 2, 3, 4, 5]]  # 12345
+```
+
+### Figurate numbers and other predicates
+```python
+["IsSquare", 49]                   # True
+["IsTriangular", 15]               # True   (1+2+3+4+5)
+["IsPentagonal", 12]               # True
+["IsOctahedral", 6]                # True
+["IsCenteredSquare", 13]           # True   (sequence: 1, 5, 13, 25, 41, ...)
+["IsPerfect", 28]                  # True   (1+2+4+7+14 = 28)
+["IsAbundant", 12]                 # True   (1+2+3+4+6 = 16 > 12)
+["IsHappy", 19]                    # True   (1²+9²=82 → 8²+2²=68 → 6²+8²=100 → 1²+0²+0²=1)
+["IsHappy", 4]                     # False  (cycles without reaching 1)
+```
+
+### Deliberately excluded
+`RandomPrime` - same reasoning as `Random`/`RandomChoice`/`RandomSample`
+throughout this solver: nondeterminism undermines reproducible formula
+evaluation.
 
 ---
 
@@ -605,6 +770,22 @@ Returns the most frequently occurring value. Ties go to whichever value appears 
 ["Covariance", ["Array", 1, 2, 3, 4, 5], ["Array", 2, 4, 6, 8, 10]]              # 5.0
 ["Round", ["Correlation", ["Array", 1, 2, 3, 4, 5], ["Array", 2, 4, 6, 8, 10]], 3]  # 1.0 (perfectly linear)
 ["Round", ["Correlation", ["Array", 1, 2, 3, 4, 5], ["Array", 5, 4, 3, 2, 1]], 3]   # -1.0 (perfectly anti-linear)
+```
+
+#### Skewness and Kurtosis
+Sample-adjusted estimators - `Skewness` matches Excel's `SKEW` and `scipy.stats.skew(..., bias=False)`; `Kurtosis` is *excess* kurtosis (0 for a normal distribution), matching Excel's `KURT` and `scipy.stats.kurtosis(..., bias=False, fisher=True)`. `Skewness` needs at least 3 data points, `Kurtosis` at least 4.
+
+```python
+["Round", ["Skewness", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3]     # 0.818
+["Round", ["Kurtosis", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3]     # 0.941
+```
+
+#### LinearRegression and PolynomialFit
+`LinearRegression` returns the least-squares linear fit as `["Array", slope, intercept]`. `PolynomialFit` returns the least-squares fit of a given `degree` (0-50) as `["Array", c0, c1, ..., cd]`, representing `c0 + c1*x + c2*x^2 + ... + cd*x^d` (**lowest degree first** - the opposite order from `numpy.polyfit`). `PolynomialFit` solves the normal equations via Gaussian elimination rather than depending on numpy, which is less numerically stable for high degrees or badly-scaled data than a QR-based solver would be - keep degrees modest.
+
+```python
+["LinearRegression", ["Array", 1, 2, 3, 4, 5], ["Array", 3, 5, 7, 9, 11]]        # ["Array", 2.0, 1.0] (y = 2x + 1)
+["PolynomialFit", ["Array", 0, 1, 2, 3, 4], ["Array", 3, 6, 11, 18, 27], 2]      # ≈ ["Array", 3.0, 2.0, 1.0] (y = x² + 2x + 3)
 ```
 
 #### Length (alias: Count)
@@ -1728,6 +1909,20 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [MachineEpsilon, CatalanConstant, EulerGamma](#constants) - More constants
 - [Rational, Numerator, Denominator](#rational-numbers) - Rational number support (approximate)
 
+### Number Theory
+- [PowerMod, ModularInverse, IntegerSqrt](#powermod-modularinverse-integersqrt) - stdlib-based modular arithmetic
+- [FactorInteger, PrimeFactors, PrimeNu, PrimeOmega, Radical, IsSquareFree](#factorinteger-primefactors-primenu-primeomega-radical-issquarefree) - Factorization
+- [Divisors, Sigma0, Sigma1, SigmaMinus1, DivisorSigma](#divisors-sigma0-sigma1-sigmaminus1-divisorsigma) - Divisor functions
+- [Divides, Totient](#divides-and-totient) - Divisibility and Euler's totient
+- [IsPerfectPower](#isperfectpower) - a = b^k test
+- [NthPrime, NextPrime, PrimePi](#nthprime-nextprime-primepi) - Prime lookups (capped)
+- [ExtendedGCD, ChineseRemainder](#extendedgcd-and-chineseremainder) - Bézout coefficients, CRT
+- [CarmichaelLambda, JacobiSymbol, LegendreSymbol, MultiplicativeOrder, PrimitiveRoot](#carmichaellambda-jacobisymbol-legendresymbol-multiplicativeorder-primitiveroot) - Modular structure
+- [LucasL, CatalanNumber, BernoulliB](#lucasl-catalannumber-bernoullib) - Named number sequences
+- [ContinuedFraction, FromContinuedFraction](#continuedfraction-and-fromcontinuedfraction) - Continued fractions
+- [IntegerDigits, DigitCount, DigitSum, FromDigits](#integerdigits-digitcount-digitsum-fromdigits) - Digit manipulation (array form)
+- [IsSquare, IsTriangular, IsPentagonal, IsOctahedral, IsCenteredSquare, IsPerfect, IsAbundant, IsHappy](#figurate-numbers-and-other-predicates) - Figurate numbers and other predicates
+
 ### Comparison Operations
 - [Equal](#equality) - Flexible equality (bool/int aware)
 - [StrictEqual](#equality) - Strict equality
@@ -1757,6 +1952,8 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Variance, StandardDeviation, PopulationVariance, PopulationStandardDeviation](#variance-and-standarddeviation) - Dispersion statistics
 - [Quartiles, InterquartileRange](#quartiles-and-interquartilerange) - Quartile statistics
 - [Covariance, Correlation](#covariance-and-correlation) - Two-array statistics
+- [Skewness, Kurtosis](#skewness-and-kurtosis) - Distribution shape statistics
+- [LinearRegression, PolynomialFit](#linearregression-and-polynomialfit) - Least-squares curve fitting
 - [Length / Count](#length-alias-count) - Array length
 - [First, Second, Third, Last, Rest, Most](#first-second-third-last-rest-most) - Access or trim array ends
 - [Reverse, Sort](#reverse-and-sort) - Reverse or sort an array

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - Unreleased
+
+### Fixed
+
+- **`extract_variables` treated unrecognized constructs' arguments as free variables.** `["Color", "red"]` would report `"red"` as a parameter to supply, even though it's a literal argument to a construct this solver doesn't implement - not a variable reference. `extract_variables` now mirrors `f()`'s own fallback for an unrecognized construct (return the expression unchanged, never evaluating or substituting into its arguments): it's treated as opaque data, contributing no free variables, rather than recursed into. Applies to any unimplemented construct (`Color`, `Quantity`, etc.), not just specific names.
+
+### Added
+
+- **More statistics:** `Skewness`, `Kurtosis` (sample-adjusted, matching Excel's `SKEW`/`KURT` and `scipy.stats.skew`/`kurtosis` with `bias=False`), `LinearRegression` (least-squares fit, returns `["Array", slope, intercept]`), `PolynomialFit` (least-squares fit of a given degree via the normal equations, no numpy dependency, returns `["Array", c0, c1, ..., cd]` - lowest degree first, the opposite order from `numpy.polyfit`). `PolynomialFit`'s degree is capped at 50.
+- **Number theory**, ~45 new functions:
+  - stdlib-based: `PowerMod`, `ModularInverse`, `IntegerSqrt`
+  - Factorization: `FactorInteger`, `PrimeFactors`, `PrimeNu`, `PrimeOmega`, `Radical`, `IsSquareFree`
+  - Divisors: `Divisors`, `Sigma0`, `Sigma1`, `SigmaMinus1`, `DivisorSigma`, `Divides`, `Totient`, `IsPerfectPower`
+  - Prime lookups (capped - `NthPrime`'s `n`/`NextPrime`'s `k` at 10,000, `NextPrime`'s starting value and every factorization-based function above at `10**12`, `PrimePi`'s `n` at 100,000; picked from measured worst-case timing, not guessed): `NthPrime`, `NextPrime`, `PrimePi`
+  - Modular structure: `ExtendedGCD`, `ChineseRemainder`, `CarmichaelLambda`, `JacobiSymbol`, `LegendreSymbol`, `MultiplicativeOrder`, `PrimitiveRoot`
+  - Sequences: `LucasL`, `CatalanNumber`, `BernoulliB` (exact, via `fractions.Fraction`; uses the B₁ = -1/2 convention), `ContinuedFraction`, `FromContinuedFraction`
+  - Digit manipulation (array form, alongside the existing string-based `IntegerString`/`DigitsFrom`): `IntegerDigits`, `DigitCount`, `DigitSum`, `FromDigits`
+  - Figurate numbers and predicates: `IsSquare`, `IsTriangular`, `IsPentagonal`, `IsOctahedral`, `IsCenteredSquare`, `IsPerfect`, `IsAbundant`, `IsHappy`
+
+  Not included: `RandomPrime` (nondeterminism, same reasoning as `Random`/`RandomChoice`/`RandomSample`).
+
 ## [2.2.1] - 2026-09-14
 
 ### Fixed
