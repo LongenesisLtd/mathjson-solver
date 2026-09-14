@@ -211,3 +211,32 @@ def test_extract_variables_which():
 def test_extract_variables_true_false_are_not_free_variables():
     result = extract_variables(["And", "True", "x", "False"], set(), set())
     assert result == {"x"}
+
+
+# --- extract_variables: unrecognized constructs are opaque, not a
+# source of free variables (e.g. Color/Quantity - anything out of
+# scope). Mirrors f()'s own fallback of returning such expressions
+# unevaluated, including never recursing into their arguments. ---
+
+
+def test_extract_variables_unrecognized_construct_is_opaque():
+    result = extract_variables(["Color", "red"], set(), set())
+    assert result == set()
+
+
+def test_extract_variables_unrecognized_construct_alongside_real_variable():
+    result = extract_variables(
+        ["Add", "x", ["ColorMix", "red", "blue"]], set(), set()
+    )
+    assert result == {"x"}
+
+
+def test_extract_variables_ignores_real_subexpression_inside_unrecognized_construct():
+    # f() never evaluates an unrecognized construct's arguments either
+    # (it returns the whole expression unchanged), so a legitimate
+    # sub-expression nested inside one contributes no free variables -
+    # supplying "x" wouldn't actually be used in that position.
+    result = extract_variables(
+        ["ColorMix", ["Add", "x", 1], "red"], set(), set()
+    )
+    assert result == set()

@@ -46,6 +46,12 @@ except ImportError:
 # exactly bounded by a single length check before any allocation.
 _MAX_STRING_REPEAT_LENGTH = 100_000
 
+# Hard cap on PolynomialFit's degree - the normal-equations system it
+# builds is (degree+1) x (degree+1), solved by O(degree^3) Gaussian
+# elimination, so an unbounded user-supplied degree is a compute-cost
+# vector the same way an unbounded string length is above.
+_MAX_POLYFIT_DEGREE = 50
+
 NoneType = type(None)
 
 
@@ -226,6 +232,289 @@ def _is_prime(n) -> bool:
     if n % 2 == 0:
         return False
     return all(n % i for i in range(3, int(n**0.5) + 1, 2))
+
+
+# --- Number theory helpers -------------------------------------------
+#
+# _is_prime, _factor_integer and _divisors are all trial-division based
+# (O(sqrt(n))) - fine for everyday inputs, but a ~15+ digit number makes
+# a single call noticeably slow (empirically: ~0.3s at 10**14, and it
+# grows with sqrt(n), so ~3s at 10**16, ~30s at 10**18). Every
+# construct built on them below caps its integer input at
+# _MAX_NUMBER_THEORY_MAGNITUDE to keep worst-case latency low.
+# `IsPrime`/`_is_prime` itself predates this and has no such cap - a
+# pre-existing gap, not introduced here; left alone rather than
+# silently changing already-shipped behavior.
+_MAX_NUMBER_THEORY_MAGNITUDE = 10**12
+
+# NthPrime/NextPrime search forward one candidate at a time; empirically
+# NthPrime(10_000) ~ 0.1s and NthPrime(100_000) ~ 3.4s, so the *count*
+# of primes to advance through needs its own (smaller) cap, separate
+# from the starting-value magnitude cap above.
+_MAX_NTH_PRIME = 10_000
+
+# PrimePi checks every integer up to n, so its cost scales with n
+# itself (not just sqrt(n)) - empirically ~0.1s at 100_000.
+_MAX_PRIME_PI = 100_000
+
+
+def _factor_integer(n):
+    n = int(n)
+    if n < 1:
+        raise ValueError("Factorization requires a positive integer.")
+    if n > _MAX_NUMBER_THEORY_MAGNITUDE:
+        raise ValueError(
+            f"Factorization is limited to integers up to "
+            f"{_MAX_NUMBER_THEORY_MAGNITUDE} (trial division is too slow "
+            f"beyond that)."
+        )
+    factors = []
+    d = 2
+    while d * d <= n:
+        if n % d == 0:
+            exp = 0
+            while n % d == 0:
+                n //= d
+                exp += 1
+            factors.append((d, exp))
+        d += 1
+    if n > 1:
+        factors.append((n, 1))
+    return factors
+
+
+def _divisors(n):
+    n = int(n)
+    if n < 1:
+        raise ValueError("Divisors requires a positive integer.")
+    if n > _MAX_NUMBER_THEORY_MAGNITUDE:
+        raise ValueError(
+            f"Divisors is limited to integers up to "
+            f"{_MAX_NUMBER_THEORY_MAGNITUDE} (trial division is too slow "
+            f"beyond that)."
+        )
+    small, large = [], []
+    d = 1
+    while d * d <= n:
+        if n % d == 0:
+            small.append(d)
+            if d != n // d:
+                large.append(n // d)
+        d += 1
+    return sorted(small + large)
+
+
+def _totient(n):
+    n = int(n)
+    if n < 1:
+        raise ValueError("'Totient' requires a positive integer.")
+    result = n
+    for p, _ in _factor_integer(n):
+        result -= result // p
+    return result
+
+
+def _integer_nth_root(n, k):
+    """Exact integer k-th root of n via binary search (no float error)."""
+    if n < 0:
+        raise ValueError("Integer root requires a non-negative integer.")
+    if n == 0:
+        return 0
+    lo, hi = 0, 1
+    while hi**k <= n:
+        hi *= 2
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if mid**k <= n:
+            lo = mid
+        else:
+            hi = mid - 1
+    return lo
+
+
+def _is_perfect_power(n):
+    n = int(n)
+    if n < 2:
+        return False
+    for k in range(2, n.bit_length() + 1):
+        root = _integer_nth_root(n, k)
+        if root >= 2 and root**k == n:
+            return True
+    return False
+
+
+def _extended_gcd(a, b):
+    old_r, r = int(a), int(b)
+    old_s, s = 1, 0
+    old_t, t = 0, 1
+    while r != 0:
+        q = old_r // r
+        old_r, r = r, old_r - q * r
+        old_s, s = s, old_s - q * s
+        old_t, t = t, old_t - q * t
+    return old_r, old_s, old_t  # (gcd, x, y) such that a*x + b*y = gcd(a, b)
+
+
+def _carmichael_lambda(n):
+    n = int(n)
+    if n < 1:
+        raise ValueError("'CarmichaelLambda' requires a positive integer.")
+    if n == 1:
+        return 1
+
+    def prime_power_lambda(p, e):
+        if p == 2 and e >= 3:
+            return 2 ** (e - 2)
+        return (p - 1) * p ** (e - 1)
+
+    result = 1
+    for p, e in _factor_integer(n):
+        result = math.lcm(result, prime_power_lambda(p, e))
+    return result
+
+
+def _jacobi_symbol(a, n):
+    n = int(n)
+    if n <= 0 or n % 2 == 0:
+        raise ValueError("requires an odd, positive modulus")
+    a = int(a) % n
+    result = 1
+    while a != 0:
+        while a % 2 == 0:
+            a //= 2
+            if n % 8 in (3, 5):
+                result = -result
+        a, n = n, a
+        if a % 4 == 3 and n % 4 == 3:
+            result = -result
+        a %= n
+    return result if n == 1 else 0
+
+
+def _multiplicative_order(a, n):
+    a, n = int(a), int(n)
+    if math.gcd(a, n) != 1:
+        raise ValueError("'MultiplicativeOrder' requires gcd(a, n) = 1.")
+    k, val = 1, a % n
+    while val != 1:
+        val = (val * a) % n
+        k += 1
+    return k
+
+
+def _primitive_root(n):
+    n = int(n)
+    phi = sum(1 for k in range(1, n) if math.gcd(k, n) == 1)
+    for g in range(1, n):
+        if math.gcd(g, n) == 1 and _multiplicative_order(g, n) == phi:
+            return g
+    raise ValueError(f"No primitive root exists modulo {n}.")
+
+
+def _chinese_remainder(remainders, moduli):
+    total_modulus = math.prod(moduli)
+    result = 0
+    for r, m in zip(remainders, moduli):
+        Mi = total_modulus // m
+        result += r * Mi * pow(Mi, -1, m)
+    return result % total_modulus
+
+
+def _lucas_l(n):
+    a, b = 2, 1
+    for _ in range(int(n)):
+        a, b = b, a + b
+    return a
+
+
+def _bernoulli(n):
+    """
+    Exact n-th Bernoulli number via the Akiyama-Tanigawa algorithm, using
+    the modern B1 = -1/2 convention (matching Mathematica and most
+    contemporary sources - the alternative B1 = +1/2 convention exists
+    too, differing only at n=1; the algorithm below naturally produces
+    +1/2, flipped here to match the more common convention).
+    """
+    n = int(n)
+    if n < 0:
+        raise ValueError("'BernoulliB' requires a non-negative integer.")
+    A = [Fraction(1, m + 1) for m in range(n + 1)]
+    for m in range(n + 1):
+        for j in range(m, 0, -1):
+            A[j - 1] = j * (A[j - 1] - A[j])
+    result = A[0]
+    return -result if n == 1 else result
+
+
+def _continued_fraction(x, max_terms=20, blowup_threshold=1e6):
+    """
+    Continued-fraction expansion of `x`. `blowup_threshold` guards
+    against floating-point noise: past a certain number of terms, a
+    double's finite precision is exhausted and further terms become
+    numerically meaningless (huge, essentially random integers) rather
+    than real information about `x` - detected here as an implausibly
+    large next term, and the expansion stopped there instead of
+    emitting garbage.
+
+    Note: a finite continued fraction has two equally valid
+    representations differing only in the last term (`[..., a]` and
+    `[..., a - 1, 1]` are the same value) - which one comes out depends
+    on where the expansion happens to terminate, not a bug.
+    """
+    terms = []
+    for _ in range(max_terms):
+        if abs(x) > blowup_threshold:
+            break
+        a = math.floor(x)
+        terms.append(a)
+        frac = x - a
+        if abs(frac) < 1e-12:
+            break
+        x = 1 / frac
+    return terms
+
+
+def _from_continued_fraction(terms):
+    result = Fraction(int(terms[-1]))
+    for a in reversed(terms[:-1]):
+        result = int(a) + 1 / result
+    return result
+
+
+def _digits_in_base(n, base):
+    n = abs(int(n))
+    base = int(base)
+    if base < 2:
+        raise ValueError("Base must be at least 2.")
+    if n == 0:
+        return [0]
+    digits = []
+    while n:
+        n, rem = divmod(n, base)
+        digits.append(rem)
+    return list(reversed(digits))
+
+
+def _is_figurate(n, formula, k_min=0):
+    """
+    Whether `n` equals `formula(k)` for some integer `k >= k_min`.
+    `formula` must be non-decreasing for `k >= k_min`. Uses binary
+    search rather than solving `formula` symbolically, so it works for
+    any such formula without per-shape algebra.
+    """
+    n = int(n)
+    if n < formula(k_min):
+        return False
+    lo, hi = k_min, k_min + 1
+    while formula(hi) < n:
+        hi *= 2
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if formula(mid) < n:
+            lo = mid + 1
+        else:
+            hi = mid
+    return formula(lo) == n
 
 
 def has_matching_sublist(
@@ -1063,6 +1352,203 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
             def IsPrime(s):
                 return _is_prime(f(s[1], c))
 
+            # --- Number theory ---
+
+            def FactorInteger(s):
+                return ["Array"] + [
+                    ["Array", p, e] for p, e in _factor_integer(f(s[1], c))
+                ]
+
+            def PrimeFactors(s):
+                return ["Array"] + [p for p, _ in _factor_integer(f(s[1], c))]
+
+            def PrimeNu(s):
+                return len(_factor_integer(f(s[1], c)))
+
+            def PrimeOmega(s):
+                return sum(e for _, e in _factor_integer(f(s[1], c)))
+
+            def Radical(s):
+                return math.prod(p for p, _ in _factor_integer(f(s[1], c)))
+
+            def IsSquareFree(s):
+                return all(e == 1 for _, e in _factor_integer(f(s[1], c)))
+
+            def Divisors(s):
+                return ["Array"] + _divisors(f(s[1], c))
+
+            def Sigma0(s):
+                return len(_divisors(f(s[1], c)))
+
+            def Sigma1(s):
+                return sum(_divisors(f(s[1], c)))
+
+            def SigmaMinus1(s):
+                return sum(Fraction(1, d) for d in _divisors(f(s[1], c)))
+
+            def DivisorSigma(s):
+                k = int(f(s[2], c))
+                return sum(d**k for d in _divisors(f(s[1], c)))
+
+            def Totient(s):
+                return _totient(f(s[1], c))
+
+            def IsPerfectPower(s):
+                return _is_perfect_power(f(s[1], c))
+
+            def NthPrime(s):
+                """
+                ["NthPrime", n]
+                The n-th prime number (1-indexed: NthPrime(1) = 2).
+                Capped at _MAX_NTH_PRIME - a naive forward search gets
+                slow well before Python's own integer limits do.
+                """
+                n = int(f(s[1], c))
+                if not (1 <= n <= _MAX_NTH_PRIME):
+                    raise ValueError(
+                        f"'NthPrime' n must be between 1 and {_MAX_NTH_PRIME}."
+                    )
+                count, candidate = 0, 1
+                while count < n:
+                    candidate += 1
+                    if _is_prime(candidate):
+                        count += 1
+                return candidate
+
+            def NextPrime(s):
+                """
+                ["NextPrime", n] or ["NextPrime", n, k]
+                The smallest prime greater than n, or the k-th such
+                prime. Both the starting value's magnitude and k are
+                capped, for the same reason as NthPrime.
+                """
+                start = int(f(s[1], c))
+                k = int(f(s[2], c)) if len(s) > 2 else 1
+                if abs(start) > _MAX_NUMBER_THEORY_MAGNITUDE:
+                    raise ValueError(
+                        f"'NextPrime' starting value is limited to "
+                        f"{_MAX_NUMBER_THEORY_MAGNITUDE} in absolute value."
+                    )
+                if not (1 <= k <= _MAX_NTH_PRIME):
+                    raise ValueError(
+                        f"'NextPrime' k must be between 1 and {_MAX_NTH_PRIME}."
+                    )
+                count, candidate = 0, start
+                while count < k:
+                    candidate += 1
+                    if _is_prime(candidate):
+                        count += 1
+                return candidate
+
+            def PrimePi(s):
+                """
+                ["PrimePi", n]
+                pi(n): the count of primes <= n. Capped at
+                _MAX_PRIME_PI - cost scales with n itself, not sqrt(n).
+                """
+                n = int(f(s[1], c))
+                if not (0 <= n <= _MAX_PRIME_PI):
+                    raise ValueError(
+                        f"'PrimePi' n must be between 0 and {_MAX_PRIME_PI}."
+                    )
+                return sum(1 for k in range(2, n + 1) if _is_prime(k))
+
+            def ExtendedGCD(s):
+                return ["Array"] + list(
+                    _extended_gcd(int(f(s[1], c)), int(f(s[2], c)))
+                )
+
+            def ChineseRemainder(s):
+                """
+                ["ChineseRemainder", remainders, moduli]
+                Solves the system x = remainders[i] (mod moduli[i]) via
+                the Chinese Remainder Theorem. Moduli must be pairwise
+                coprime.
+                """
+                remainders = _arr_vals_of(s[1])
+                moduli = _arr_vals_of(s[2])
+                return _chinese_remainder(remainders, moduli)
+
+            def CarmichaelLambda(s):
+                return _carmichael_lambda(f(s[1], c))
+
+            def JacobiSymbol(s):
+                return _jacobi_symbol(f(s[1], c), f(s[2], c))
+
+            def MultiplicativeOrder(s):
+                return _multiplicative_order(f(s[1], c), f(s[2], c))
+
+            def PrimitiveRoot(s):
+                return _primitive_root(f(s[1], c))
+
+            def LucasL(s):
+                return _lucas_l(f(s[1], c))
+
+            def BernoulliB(s):
+                return _bernoulli(f(s[1], c))
+
+            def ContinuedFraction(s):
+                x = f(s[1], c)
+                max_terms = int(f(s[2], c)) if len(s) > 2 else 20
+                return ["Array"] + _continued_fraction(x, max_terms)
+
+            def FromContinuedFraction(s):
+                return _from_continued_fraction(_arr_vals(s))
+
+            def IntegerDigits(s):
+                base = int(f(s[2], c)) if len(s) > 2 else 10
+                return ["Array"] + _digits_in_base(f(s[1], c), base)
+
+            def DigitCount(s):
+                base = int(f(s[2], c)) if len(s) > 2 else 10
+                return len(_digits_in_base(f(s[1], c), base))
+
+            def DigitSum(s):
+                base = int(f(s[2], c)) if len(s) > 2 else 10
+                return sum(_digits_in_base(f(s[1], c), base))
+
+            def FromDigits(s):
+                digits = _arr_vals(s)
+                base = int(f(s[2], c)) if len(s) > 2 else 10
+                result = 0
+                for d in digits:
+                    result = result * base + int(d)
+                return result
+
+            def IsSquare(s):
+                n = int(f(s[1], c))
+                return n >= 0 and math.isqrt(n) ** 2 == n
+
+            def IsTriangular(s):
+                return _is_figurate(f(s[1], c), lambda k: k * (k + 1) // 2, 0)
+
+            def IsPentagonal(s):
+                return _is_figurate(f(s[1], c), lambda k: k * (3 * k - 1) // 2, 1)
+
+            def IsOctahedral(s):
+                return _is_figurate(
+                    f(s[1], c), lambda k: k * (2 * k * k + 1) // 3, 1
+                )
+
+            def IsCenteredSquare(s):
+                return _is_figurate(f(s[1], c), lambda k: 2 * k * (k - 1) + 1, 1)
+
+            def IsPerfect(s):
+                n = f(s[1], c)
+                return sum(_divisors(n)[:-1]) == n
+
+            def IsAbundant(s):
+                n = f(s[1], c)
+                return sum(_divisors(n)[:-1]) > n
+
+            def IsHappy(s):
+                n = int(f(s[1], c))
+                seen = set()
+                while n != 1 and n not in seen:
+                    seen.add(n)
+                    n = sum(int(d) ** 2 for d in str(n))
+                return n == 1
+
             def Variance(s):
                 return variance(_arr_vals(s))
 
@@ -1115,6 +1601,144 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 collections.
                 """
                 return correlation(_arr_vals_of(s[1]), _arr_vals_of(s[2]))
+
+            def Skewness(s):
+                """
+                ["Skewness", array]
+                Sample skewness (the adjusted Fisher-Pearson standardized
+                moment coefficient - matches Excel's SKEW and
+                scipy.stats.skew(..., bias=False)): a measure of the
+                asymmetry of the data's distribution. Requires at least
+                3 data points.
+                """
+                vals = _arr_vals(s)
+                n = len(vals)
+                if n < 3:
+                    raise ValueError("'Skewness' requires at least 3 data points.")
+                m = sum(vals) / n
+                s_dev = stdev(vals)
+                if s_dev == 0:
+                    raise ValueError(
+                        "'Skewness' is undefined when all values are equal."
+                    )
+                m3 = sum((x - m) ** 3 for x in vals) / n
+                return (n**2 / ((n - 1) * (n - 2))) * m3 / s_dev**3
+
+            def Kurtosis(s):
+                """
+                ["Kurtosis", array]
+                Sample excess kurtosis (the adjusted Fisher-Pearson
+                estimator - matches Excel's KURT and
+                scipy.stats.kurtosis(..., bias=False, fisher=True)): a
+                measure of the "tailedness" of the data's distribution
+                (0 for a normal distribution). Requires at least 4 data
+                points.
+                """
+                vals = _arr_vals(s)
+                n = len(vals)
+                if n < 4:
+                    raise ValueError("'Kurtosis' requires at least 4 data points.")
+                m = sum(vals) / n
+                m2 = sum((x - m) ** 2 for x in vals) / n
+                m4 = sum((x - m) ** 4 for x in vals) / n
+                if m2 == 0:
+                    raise ValueError(
+                        "'Kurtosis' is undefined when all values are equal."
+                    )
+                g2 = m4 / m2**2 - 3
+                return ((n - 1) / ((n - 2) * (n - 3))) * ((n + 1) * g2 + 6)
+
+            def LinearRegression(s):
+                """
+                ["LinearRegression", x_array, y_array]
+                The least-squares linear fit y = slope*x + intercept,
+                returned as ["Array", slope, intercept].
+                """
+                x = _arr_vals_of(s[1])
+                y = _arr_vals_of(s[2])
+                if len(x) != len(y):
+                    raise ValueError("Both arrays must be of the same length.")
+                n = len(x)
+                if n < 2:
+                    raise ValueError(
+                        "'LinearRegression' requires at least 2 data points."
+                    )
+                mx, my = sum(x) / n, sum(y) / n
+                sxy = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y))
+                sxx = sum((xi - mx) ** 2 for xi in x)
+                if sxx == 0:
+                    raise ValueError(
+                        "'LinearRegression' is undefined when all x values are equal."
+                    )
+                slope = sxy / sxx
+                intercept = my - slope * mx
+                return ["Array", slope, intercept]
+
+            def _solve_linear_system(matrix, vector):
+                """
+                Solves `matrix @ x = vector` via Gaussian elimination
+                with partial pivoting - a pure-Python solver (no numpy
+                dependency) for the small, dense normal-equations system
+                `PolynomialFit` builds. Less numerically stable than a
+                QR-based solver for high degrees or badly-scaled data,
+                but exact enough for the modest degrees this is capped
+                at. Raises ValueError if the system is singular.
+                """
+                n = len(matrix)
+                rows = [list(row) + [vector[i]] for i, row in enumerate(matrix)]
+                for col in range(n):
+                    pivot = max(range(col, n), key=lambda r: abs(rows[r][col]))
+                    if abs(rows[pivot][col]) < 1e-12:
+                        raise ValueError(
+                            "System is singular - check for duplicate x values "
+                            "or too few distinct points for the requested degree."
+                        )
+                    rows[col], rows[pivot] = rows[pivot], rows[col]
+                    for r in range(n):
+                        if r != col:
+                            factor = rows[r][col] / rows[col][col]
+                            for cc in range(col, n + 1):
+                                rows[r][cc] -= factor * rows[col][cc]
+                return [rows[i][n] / rows[i][i] for i in range(n)]
+
+            def PolynomialFit(s):
+                """
+                ["PolynomialFit", x_array, y_array, degree]
+                The least-squares polynomial fit of the given `degree`
+                (0 to _MAX_POLYFIT_DEGREE), via the normal equations
+                solved with Gaussian elimination - no numpy dependency,
+                but less numerically stable for high degrees or
+                badly-scaled x values than a QR-based solver (e.g.
+                numpy.polyfit) would be; keep degrees modest for
+                well-conditioned results. Returns
+                ["Array", c0, c1, ..., cd] representing
+                `c0 + c1*x + c2*x^2 + ... + cd*x^d` (lowest degree
+                first - the opposite order from numpy.polyfit).
+                """
+                x = _arr_vals_of(s[1])
+                y = _arr_vals_of(s[2])
+                if len(x) != len(y):
+                    raise ValueError("Both arrays must be of the same length.")
+                degree = int(f(s[3], c))
+                if not (0 <= degree <= _MAX_POLYFIT_DEGREE):
+                    raise ValueError(
+                        f"'PolynomialFit' degree must be between 0 and "
+                        f"{_MAX_POLYFIT_DEGREE}."
+                    )
+                if len(x) < degree + 1:
+                    raise ValueError(
+                        "'PolynomialFit' needs at least degree + 1 data points."
+                    )
+                power_sums = [sum(xi**k for xi in x) for k in range(2 * degree + 1)]
+                matrix = [
+                    [power_sums[i + j] for j in range(degree + 1)]
+                    for i in range(degree + 1)
+                ]
+                vector = [
+                    sum((xi**k) * yi for xi, yi in zip(x, y))
+                    for k in range(degree + 1)
+                ]
+                return ["Array"] + _solve_linear_system(matrix, vector)
 
             def Any(s):
                 evaluated = f(s[1], c)
@@ -2459,6 +3083,58 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "IsPrime": IsPrime,
                 "Erf": lambda s: math.erf(f(s[1], c)),
                 "Erfc": lambda s: math.erfc(f(s[1], c)),
+                # --- Number theory ---
+                "PowerMod": lambda s: pow(
+                    int(f(s[1], c)), int(f(s[2], c)), int(f(s[3], c))
+                ),
+                "ModularInverse": lambda s: pow(
+                    int(f(s[1], c)), -1, int(f(s[2], c))
+                ),
+                "IntegerSqrt": lambda s: math.isqrt(int(f(s[1], c))),
+                "FactorInteger": FactorInteger,
+                "PrimeFactors": PrimeFactors,
+                "PrimeNu": PrimeNu,
+                "PrimeOmega": PrimeOmega,
+                "Radical": Radical,
+                "IsSquareFree": IsSquareFree,
+                "Divisors": Divisors,
+                "Sigma0": Sigma0,
+                "Sigma1": Sigma1,
+                "SigmaMinus1": SigmaMinus1,
+                "DivisorSigma": DivisorSigma,
+                "Divides": lambda s: f(s[2], c) % f(s[1], c) == 0,
+                "Totient": Totient,
+                "IsPerfectPower": IsPerfectPower,
+                "NthPrime": NthPrime,
+                "NextPrime": NextPrime,
+                "PrimePi": PrimePi,
+                "ExtendedGCD": ExtendedGCD,
+                "ChineseRemainder": ChineseRemainder,
+                "CarmichaelLambda": CarmichaelLambda,
+                "JacobiSymbol": JacobiSymbol,
+                "LegendreSymbol": JacobiSymbol,  # same algorithm when n is prime
+                "MultiplicativeOrder": MultiplicativeOrder,
+                "PrimitiveRoot": PrimitiveRoot,
+                "LucasL": LucasL,
+                "CatalanNumber": lambda s: math.comb(
+                    2 * int(f(s[1], c)), int(f(s[1], c))
+                )
+                // (int(f(s[1], c)) + 1),
+                "BernoulliB": BernoulliB,
+                "ContinuedFraction": ContinuedFraction,
+                "FromContinuedFraction": FromContinuedFraction,
+                "IntegerDigits": IntegerDigits,
+                "DigitCount": DigitCount,
+                "DigitSum": DigitSum,
+                "FromDigits": FromDigits,
+                "IsSquare": IsSquare,
+                "IsTriangular": IsTriangular,
+                "IsPentagonal": IsPentagonal,
+                "IsOctahedral": IsOctahedral,
+                "IsCenteredSquare": IsCenteredSquare,
+                "IsPerfect": IsPerfect,
+                "IsAbundant": IsAbundant,
+                "IsHappy": IsHappy,
                 # --- Boolean logic ---
                 "Xor": lambda s: bool(f(s[1], c)) ^ bool(f(s[2], c)),
                 "Nand": lambda s: not all(f(x, c) for x in s[1:]),
@@ -2475,6 +3151,10 @@ def create_mathjson_solver(solver_parameters, legacy_v1=False):
                 "InterquartileRange": InterquartileRange,
                 "Covariance": Covariance,
                 "Correlation": Correlation,
+                "Skewness": Skewness,
+                "Kurtosis": Kurtosis,
+                "LinearRegression": LinearRegression,
+                "PolynomialFit": PolynomialFit,
                 # --- Collections ---
                 "First": First,
                 "Second": Second,
@@ -2751,6 +3431,50 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "IsPrime",
         "Erf",
         "Erfc",
+        "PowerMod",
+        "ModularInverse",
+        "IntegerSqrt",
+        "FactorInteger",
+        "PrimeFactors",
+        "PrimeNu",
+        "PrimeOmega",
+        "Radical",
+        "IsSquareFree",
+        "Divisors",
+        "Sigma0",
+        "Sigma1",
+        "SigmaMinus1",
+        "DivisorSigma",
+        "Divides",
+        "Totient",
+        "IsPerfectPower",
+        "NthPrime",
+        "NextPrime",
+        "PrimePi",
+        "ExtendedGCD",
+        "ChineseRemainder",
+        "CarmichaelLambda",
+        "JacobiSymbol",
+        "LegendreSymbol",
+        "MultiplicativeOrder",
+        "PrimitiveRoot",
+        "LucasL",
+        "CatalanNumber",
+        "BernoulliB",
+        "ContinuedFraction",
+        "FromContinuedFraction",
+        "IntegerDigits",
+        "DigitCount",
+        "DigitSum",
+        "FromDigits",
+        "IsSquare",
+        "IsTriangular",
+        "IsPentagonal",
+        "IsOctahedral",
+        "IsCenteredSquare",
+        "IsPerfect",
+        "IsAbundant",
+        "IsHappy",
         "Xor",
         "Nand",
         "Nor",
@@ -2765,6 +3489,10 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
         "InterquartileRange",
         "Covariance",
         "Correlation",
+        "Skewness",
+        "Kurtosis",
+        "LinearRegression",
+        "PolynomialFit",
         "First",
         "Second",
         "Third",
@@ -2861,6 +3589,17 @@ def extract_variables(s: Union[list, int, float, str], li: set, ignore_list: set
             ignore_list.add("_")
             if len(s) > 1:
                 li.update(extract_variables(s[1], li, ignore_list))
+        elif s[0] not in constructs:
+            # Unrecognized construct (e.g. "Color", "Quantity" - anything
+            # this solver doesn't implement): f() never evaluates or
+            # substitutes into such expressions either (its fallback for
+            # an unknown head is to return the whole list unchanged), so
+            # none of its arguments are free variables to supply. Treat
+            # the whole thing as opaque data rather than recursing into
+            # it, so a decorative/unrelated subtree (e.g. a color literal
+            # meant for something else downstream) doesn't get reported
+            # as a required parameter.
+            pass
         else:
             for x in s[1:]:
                 li.update(extract_variables(x, li, ignore_list))
