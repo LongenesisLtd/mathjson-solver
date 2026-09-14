@@ -14,6 +14,7 @@ A reliable Python library for numerically evaluating mathematical expressions in
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Migrating from 1.x](#migrating-from-1x)
+- [Restricting Available Functions](#restricting-available-functions)
 - [Supported Operations](#supported-operations)
 - [Error Handling](#error-handling)
 - [Use Cases](#use-cases)
@@ -93,6 +94,22 @@ translate_v1_mathjson(["Add", ["Log", 8], 1])  # ["Add", ["Ln", 8], 1]
 
 `legacy_v1=True` only affects `Log`. Every other 1.x expression already evaluates identically on 2.x without any translation.
 
+## Restricting Available Functions
+
+Pass `blacklist` to disable specific constructs for a solver instance — useful when evaluating expressions from a source you don't fully trust, or when your deployment simply doesn't want certain functions exposed:
+
+```python
+solver = create_solver(parameters, blacklist=["PowerSet", "Permutations", "Combinations", "CartesianProduct"])
+solver(["PowerSet", ["Array", 1, 2, 3]])
+# Raises: MathJSONException: Problem in PowerSet. [...]. 'PowerSet' has been disabled in this solver instance.
+
+solver(["Add", 1, 2])  # unaffected constructs still work: 3.0
+```
+
+**This is an access-policy control, not a resource limiter.** Blacklisting a construct stops it from running at all; it doesn't make an *enabled* construct safe against pathological input. In particular, the enumeration functions (`PowerSet`, `Permutations`, `Combinations`, `CartesianProduct`) have no built-in output-size limit — `["PowerSet", ["Range", 30]]` will try to materialize over a billion subsets if you let it run. If you're evaluating expressions from an untrusted source, blacklist any construct whose worst-case cost you haven't reasoned about, rather than assuming everything implemented is safe by default for every threat model.
+
+A blacklisted name that isn't an actual construct (a typo, for instance) is silently ignored rather than rejected — `blacklist` isn't validated against the list of implemented constructs.
+
 ## Supported Operations
 
 The library supports a comprehensive set of mathematical operations:
@@ -111,6 +128,9 @@ The library supports a comprehensive set of mathematical operations:
 * **Pattern Matching (requires the optional `regex` extra, `pip install mathjson-solver[regex]`):** RegExp, IsMatch, StringMatch, StringMatchAll — backed by [RE2](https://github.com/google/re2) rather than Python's `re`, for a hard guarantee against catastrophic backtracking (no backreferences/lookaround, as a deliberate trade-off for that guarantee)
 * **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
 * **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc, Rational, Numerator, Denominator, MachineEpsilon, CatalanConstant, EulerGamma, PowerMod, ModularInverse, IntegerSqrt, FactorInteger, PrimeFactors, PrimeNu, PrimeOmega, Radical, IsSquareFree, Divisors, Sigma0, Sigma1, SigmaMinus1, DivisorSigma, Divides, Totient, IsPerfectPower, NthPrime, NextPrime, PrimePi, ExtendedGCD, ChineseRemainder, CarmichaelLambda, JacobiSymbol, LegendreSymbol, MultiplicativeOrder, PrimitiveRoot, LucasL, CatalanNumber, BernoulliB, ContinuedFraction, FromContinuedFraction, IntegerDigits, DigitCount, DigitSum, FromDigits, IsSquare, IsTriangular, IsPentagonal, IsOctahedral, IsCenteredSquare, IsPerfect, IsAbundant, IsHappy
+* **Special Functions:** Gamma, GammaLn, Beta, Factorial2, ErfInv, LambertW, AGM, EllipticK, EllipticE
+* **Combinatorics:** Choose, Fibonacci, Multinomial, Subfactorial, BellNumber, PowerSet, Permutations, Combinations, CartesianProduct (the last four have no output-size limit - see [Restricting Available Functions](#restricting-available-functions))
+* **Core (structural introspection):** Head, Tail, Hold, Identity, Type, IsSame, Same
 * **Integration (requires the optional `integration` extra, `pip install mathjson-solver[integration]`):** TrapezoidalIntegrate. Also in this group but with no extra dependency: Interp, FindIntervalIndex, Variable references
 * **Advanced:** HasMatchingSublist for pattern matching
 * **Constants:** Pi, Degrees, ExponentialE, GoldenRatio
