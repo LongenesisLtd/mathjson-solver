@@ -12,7 +12,9 @@
 8. [Date and Time Functions](#date-and-time-functions)
 9. [Trigonometric Functions](#trigonometric-functions)
 10. [Advanced Functions](#advanced-functions)
-11. [Integration Functions](#integration-functions)
+11. [String Functions](#string-functions)
+12. [Pattern Matching](#pattern-matching)
+13. [Integration Functions](#integration-functions)
 
 ---
 
@@ -216,6 +218,9 @@ Returns the smallest integer greater than or equal to the given number.
 ["Degrees"]                       # π/180 ≈ 0.01745 (multiply degrees by this to get radians)
 ["ExponentialE"]                  # e ≈ 2.71828
 ["GoldenRatio"]                   # φ ≈ 1.61803
+["MachineEpsilon"]                # ≈ 2.22e-16 (smallest representable difference from 1.0)
+["CatalanConstant"]               # ≈ 0.91597
+["EulerGamma"]                    # ≈ 0.57722 (Euler-Mascheroni constant)
 ```
 
 ### Number Theory and Special Functions
@@ -235,6 +240,24 @@ Returns the smallest integer greater than or equal to the given number.
 ["IsPrime", 8]                    # False
 ["Erf", 1]                        # 0.8427... (error function)
 ["Erfc", 1]                       # 0.1573... (complementary error function)
+```
+
+### Rational Numbers
+This solver has no dedicated rational-number type carried through arithmetic - `Rational` evaluates to a plain float, same as `Divide`.
+
+```python
+["Rational", 3, 4]                # 0.75
+```
+
+`Numerator`/`Denominator` read a `["Rational", n, d]` expression's declared `n`/`d` exactly when passed one directly (unreduced - `["Rational", 6, 8]` gives numerator `6`, not `3`); otherwise (a plain number) they fall back to reconstructing the closest fraction with a bounded denominator, a best-effort approximation rather than exact/symbolic.
+
+```python
+["Numerator", ["Rational", 3, 4]]  # 3
+["Denominator", ["Rational", 3, 4]]  # 4
+["Numerator", 5]                   # 5 (plain integers have denominator 1)
+["Denominator", 5]                 # 1
+["Numerator", 0.75]                # 3 (reconstructed from the float)
+["Denominator", 0.75]              # 4
 ```
 
 ---
@@ -268,6 +291,15 @@ On the other hand, `StrictEqual` enforces a more precise comparison by consideri
 ["NotEqual", 1, 2]                # 1≠2 ➞  True
 ["NotEqual", "aaa", "bbb"]        # "aaa≠"bbb" ➞  True
 ["NotEqual", "aaa", 0]            # "aaa≠0 ➞  True
+```
+
+### IdenticallyEqual
+Stricter than `StrictEqual`: true only if both operands have the same Python type *and* are equal.
+
+```python
+["IdenticallyEqual", 1, 1]        # True
+["IdenticallyEqual", 1, 1.0]      # False (int vs float)
+["StrictEqual", 1, 1.0]           # True, for contrast
 ```
 
 ### IsTrue and IsFalse
@@ -311,6 +343,14 @@ A typical use case is checking the result of `All` or `Any`:
 ["Less", 1, 2]                    # 1<2 ➞  True
 ["LessEqual", 1, 1]               # 1⩽1 ➞  True
 ["LessEqual", 1, 2]               # 1⩽2 ➞  True
+```
+
+### Congruent
+Modular congruence: `a ≡ b (mod modulus)`.
+
+```python
+["Congruent", 7, 2, 5]            # True (7 - 2 = 5, divisible by 5)
+["Congruent", 7, 3, 5]            # False
 ```
 
 ---
@@ -436,7 +476,17 @@ Example:
 
 The expression in this example will make solver to look for a constant (or a parameter) with the name "color". If "color" is "red", expression evaluates to 10, if "blue" - to 20, if "green" - to 30. Otherwise to 100. Please note that "color" here is a valid expression that evaluates to the actual value of "color" whether it is a parameter or constant.
 
-`Which` is the CortexJS name for `Switch` and takes exactly the same arguments.
+### Which
+```
+["Which", condition1, value1, condition2, value2, ..., conditionN, valueN]
+```
+
+`Which` is CortexJS's multi-branch conditional - **not** the same as `Switch`, despite both being "multi-branch". Each `condition` is a boolean expression (not a value to compare against), and `condition`/`value` are flat, separate arguments rather than nested `[case, result]` pairs. Evaluates each `condition` in order and returns the `value` paired with the first truthy one; later conditions and values are never evaluated. Returns `None` (CortexJS `Nothing`) if no condition matches.
+
+```python
+["Which", ["Equal", "x", 1], "a", ["Equal", "x", 2], "b"]   # "b", if x == 2
+["Which", ["Equal", "x", 1], "a", ["Equal", "x", 2], "b"]   # None, if x is neither 1 nor 2
+```
 
 ---
 
@@ -524,11 +574,37 @@ Median can also work with parameter references:
 ```
 
 #### Variance and StandardDeviation
-Returns the (sample) variance and standard deviation of an array's numeric elements.
+Returns the (sample) variance and standard deviation of an array's numeric elements. `PopulationVariance`/`PopulationStandardDeviation` divide by `n` instead of `n-1`.
 
 ```python
 ["Round", ["Variance", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3]           # 4.571
 ["Round", ["StandardDeviation", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]], 3]  # 2.138
+["PopulationVariance", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]]               # 4
+["PopulationStandardDeviation", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]]      # 2.0
+```
+
+#### Mode
+Returns the most frequently occurring value. Ties go to whichever value appears first in the array.
+
+```python
+["Mode", ["Array", 1, 2, 2, 3]]                                        # 2
+```
+
+#### Quartiles and InterquartileRange
+`Quartiles` returns the three points (Q1, Q2/median, Q3) that divide an array's numeric elements into four equal-sized groups. `InterquartileRange` is Q3 - Q1.
+
+```python
+["Quartiles", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]]                       # ["Array", 4.0, 4.5, 6.5]
+["InterquartileRange", ["Array", 2, 4, 4, 4, 5, 5, 7, 9]]              # 2.5
+```
+
+#### Covariance and Correlation
+`Covariance` is the sample covariance of two equal-length arrays. `Correlation` is their Pearson correlation coefficient.
+
+```python
+["Covariance", ["Array", 1, 2, 3, 4, 5], ["Array", 2, 4, 6, 8, 10]]              # 5.0
+["Round", ["Correlation", ["Array", 1, 2, 3, 4, 5], ["Array", 2, 4, 6, 8, 10]], 3]  # 1.0 (perfectly linear)
+["Round", ["Correlation", ["Array", 1, 2, 3, 4, 5], ["Array", 5, 4, 3, 2, 1]], 3]   # -1.0 (perfectly anti-linear)
 ```
 
 #### Length (alias: Count)
@@ -557,11 +633,13 @@ CortexJS name for creating an array; behaves the same as `Array`.
 ["List", 1, 2, 3]                                 # ["Array", 1, 2, 3]
 ```
 
-#### First, Last, Rest, Most
-Access or trim the ends of an array.
+#### First, Second, Third, Last, Rest, Most
+Access or trim the ends of an array. `Second`/`Third` are fixed-position shortcuts, equivalent to `["At", array, 2]`/`["At", array, 3]`.
 
 ```python
 ["First", ["Array", 1, 2, 3]]                     # 1
+["Second", ["Array", 1, 2, 3]]                     # 2
+["Third", ["Array", 1, 2, 3]]                      # 3
 ["Last", ["Array", 1, 2, 3]]                       # 3
 ["Rest", ["Array", 1, 2, 3]]                       # ["Array", 2, 3] (all but the first)
 ["Most", ["Array", 1, 2, 3]]                       # ["Array", 1, 2] (all but the last)
@@ -581,11 +659,12 @@ Access or trim the ends of an array.
 ["IsEmpty", ["Array", 1]]                          # False
 ```
 
-#### Unique
-Removes duplicates, preserving the order of first occurrence.
+#### Unique and Dedup
+`Unique` removes every duplicate, preserving the order of first occurrence. `Dedup` only removes *consecutive* duplicates.
 
 ```python
 ["Unique", ["Array", 1, 2, 2, 3, 1]]               # ["Array", 1, 2, 3]
+["Dedup", ["Array", 1, 1, 2, 2, 2, 1, 3, 3]]       # ["Array", 1, 2, 1, 3]
 ```
 
 #### Join
@@ -643,6 +722,86 @@ Extracts a portion of an array between start and end indices (exclusive end).
 ["Slice", ["Array", 10, 20, 30, 40, 50, 60], 2, 4]  # ["Array", 30, 40]
 ["Slice", ["Array", 10, 20, 30, 40, 50, 60], 2, 5]  # ["Array", 30, 40, 50]
 ```
+
+#### Take and Drop
+`Take`/`Drop` keep or remove the first `n` elements; a negative `n` counts from the end instead. Distinct from `Slice`, which takes an explicit `[start, end)` range rather than a count. `TakeWhile`/`DropWhile` take a predicate instead of a count - see [Predicate and function arguments](#predicate-and-function-arguments) below for the accepted forms.
+
+```python
+["Take", ["Array", 1, 2, 3, 4, 5], 3]              # ["Array", 1, 2, 3]
+["Take", ["Array", 1, 2, 3, 4, 5], -2]              # ["Array", 4, 5]
+["Drop", ["Array", 1, 2, 3, 4, 5], 2]               # ["Array", 3, 4, 5]
+["TakeWhile", ["Array", 1, 2, 3, 10, 4], ["Function", ["Less", "_", 5]]]     # ["Array", 1, 2, 3]
+["DropWhile", ["Array", 1, 2, 3, 10, 4], ["Function", ["Less", "_", 5]]]    # ["Array", 10, 4]
+```
+
+#### Contains, IndexOf, IndexWhere, Find, CountIf, Position
+Searching and testing. `Contains` takes the collection first (`["Contains", array, value]`) - the opposite argument order from `In` (`["In", value, collection]`). `IndexOf`/`IndexWhere` are 1-indexed (CortexJS convention) and return `None` if nothing matches.
+
+```python
+["Contains", ["Array", 1, 2, 3], 2]                # True
+["IndexOf", ["Array", "a", "b", "c"], "b"]         # 2
+["IndexOf", ["Array", "a", "b", "c"], "z"]         # None
+["IndexWhere", ["Array", 1, 2, 3, 4], ["Function", ["Greater", "_", 2]]]   # 3
+["Find", ["Array", 1, 2, 3, 4], ["Function", ["Greater", "_", 2]]]        # 3 (the element, not its index)
+["CountIf", ["Array", 1, 2, 3, 4, 5], ["Function", ["Greater", "_", 2]]]  # 3
+["Position", ["Array", 1, 2, 3, 4, 5], ["Function", ["Greater", "_", 2]]] # ["Array", 3, 4, 5] (all matching indexes)
+```
+
+#### RotateLeft and RotateRight
+Circularly shift an array by `n` positions.
+
+```python
+["RotateLeft", ["Array", 1, 2, 3, 4, 5], 2]        # ["Array", 3, 4, 5, 1, 2]
+["RotateRight", ["Array", 1, 2, 3, 4, 5], 2]       # ["Array", 4, 5, 1, 2, 3]
+```
+
+#### MaxBy, MinBy, ArgMax, ArgMin, Ordering
+`MaxBy`/`MinBy` return the element for which `function(element)` is largest/smallest. `ArgMax`/`ArgMin` return the 1-indexed position of the largest/smallest element directly (no function). `Ordering` returns the 1-indexed positions that would sort the array ascending.
+
+```python
+["MaxBy", ["Array", -5, 3, -2], ["Function", ["Abs", "_"]]]  # -5 (|-5| is largest)
+["MinBy", ["Array", -5, 3, -2], ["Function", ["Abs", "_"]]]  # -2 (|-2| is smallest)
+["ArgMax", ["Array", 3, 7, 2]]                     # 2 (position of 7)
+["ArgMin", ["Array", 3, 7, 2]]                     # 3 (position of 2)
+["Ordering", ["Array", 30, 10, 20]]                # ["Array", 2, 3, 1]
+```
+
+#### FlatMap, Scan, Differences, Fold
+`FlatMap` applies `function` to each element (like `Map`) and splices any array results into a single flat array. `Scan` is like the CortexJS form of `Reduce`, but returns every intermediate accumulator value instead of just the final one. `Differences` gives successive differences. `Fold` is the function-first form of `Reduce`'s CortexJS calling convention (`["Fold", function, array]` instead of `["Reduce", array, function]`).
+
+```python
+["FlatMap", ["Array", 1, 2, 3], ["Function", ["Range", "_"]]]  # ["Array", 1, 1, 2, 1, 2, 3]
+["Scan", ["Array", 1, 2, 3, 4], ["Add"]]           # ["Array", 1, 3.0, 6.0, 10.0]
+["Differences", ["Array", 1, 3, 6, 10]]            # ["Array", 2, 3, 4]
+["Fold", ["Add"], ["Array", 1, 2, 3, 4]]           # 10.0
+```
+
+#### Insert, DeleteAt, ReplaceAt, Append
+Editing operations, 1-indexed like `At` (negative indexes count from the end). `Append` is CortexJS's name for the existing `Appended`.
+
+```python
+["Insert", ["Array", 1, 2, 4], 3, 3]               # ["Array", 1, 2, 3, 4]
+["DeleteAt", ["Array", 1, 2, 3, 4], 2]              # ["Array", 1, 3, 4]
+["ReplaceAt", ["Array", 1, 2, 3], 2, 99]            # ["Array", 1, 99, 3]
+["Append", ["Array", 1, 2], 3]                      # ["Array", 1, 2, 3]
+```
+
+#### Partition, Chunk, GroupBy, ChunkBy, Tally
+`Partition` splits into consecutive chunks of a fixed *size*; `Chunk` splits into a fixed *number* of roughly equal groups. `GroupBy` groups elements by a key function (returned as `[key, group]` pairs, in order of first appearance - there's no dedicated `Dictionary` type). `ChunkBy` only merges *consecutive* runs sharing a key. `Tally` counts occurrences of each distinct element.
+
+```python
+["Partition", ["Array", 1, 2, 3, 4, 5], 2]         # ["Array", ["Array", 1, 2], ["Array", 3, 4], ["Array", 5]]
+["Chunk", ["Array", 1, 2, 3, 4, 5], 2]              # ["Array", ["Array", 1, 2, 3], ["Array", 4, 5]]
+["GroupBy", ["Array", 1, 2, 3, 4, 5, 6], ["Function", ["Mod", "_", 2]]]
+  # ["Array", ["Array", 1, ["Array", 1, 3, 5]], ["Array", 0, ["Array", 2, 4, 6]]]
+["ChunkBy", ["Array", 1, 1, 2, 2, 1, 1], ["Function", "_"]]
+  # ["Array", ["Array", 1, 1], ["Array", 2, 2], ["Array", 1, 1]]
+["Tally", ["Array", "a", "b", "a", "c", "b", "a"]]
+  # ["Array", ["Array", "a", 3], ["Array", "b", 2], ["Array", "c", 1]]
+```
+
+#### Predicate and function arguments
+`TakeWhile`, `DropWhile`, `IndexWhere`, `Find`, `CountIf`, `Position`, `MaxBy`, `MinBy`, `FlatMap`, `GroupBy`, and `ChunkBy` all take a predicate or key function, using the same two forms as [`Map`](#map)/[`Filter`](#filter): a call template (e.g. `["IsPrime"]`, applied as `f(element)`) or a [`Function`](#function) expression (e.g. `["Function", ["Greater", "_", 2]]`).
 
 #### Reduce
 Reduces an array to a single value. Two calling conventions are supported, chosen automatically by argument count.
@@ -791,6 +950,18 @@ Calculates the cumulative sum of array elements, returning an array where each e
 
 ### Boolean Operations
 
+#### Boolean Literals
+CortexJS represents booleans as the bare symbols `"True"`/`"False"`, distinct from native JSON `true`/`false` (which already evaluate correctly, since Python's `bool` is a `numbers.Number` subtype). Both forms now evaluate to actual booleans.
+
+```python
+"True"                             # True
+"False"                            # False
+["Equal", "flag", "True"]          # True, if the "flag" parameter is True
+["And", "True", "True"]            # True
+```
+
+They are reserved literals: a solver parameter or local variable named `"True"`/`"False"` cannot shadow them.
+
 #### Any
 Returns `True` if any element in the array is truthy, `False` if all elements are falsy.
 
@@ -938,6 +1109,35 @@ Checks if the first array contains none of the elements from the second array. B
 ["Contains_none_of", ["Array", 1, 2], ["Array", 2, 3]]             # False
 ["ContainsNoneOf", ["Array", 1, 2], ["Array", 2, 3]]               # False
 ["Contains_none_of", ["Array", 1, 2, 3], ["Array", 4, 5]]          # True
+```
+
+### Set Algebra
+Basic set operations over `Array`, treating arrays as sets - there is no dedicated `Set` type in this solver.
+
+#### Union and Intersection
+Variadic (2 or more arrays), deduplicated, order-preserving.
+
+```python
+["Union", ["Array", 1, 2, 3], ["Array", 2, 3, 4]]                  # ["Array", 1, 2, 3, 4]
+["Union", ["Array", 1, 2], ["Array", 2, 3], ["Array", 3, 4]]       # ["Array", 1, 2, 3, 4]
+["Intersection", ["Array", 1, 2, 3], ["Array", 2, 3, 4]]           # ["Array", 2, 3]
+["Intersection", ["Array", 1, 2], ["Array", 3, 4]]                 # ["Array"]
+```
+
+#### SetMinus and SymmetricDifference
+Binary. `SetMinus` keeps `array1`'s elements not in `array2`; `SymmetricDifference` keeps elements in exactly one of the two.
+
+```python
+["SetMinus", ["Array", 1, 2, 3], ["Array", 2]]                     # ["Array", 1, 3]
+["SymmetricDifference", ["Array", 1, 2, 3], ["Array", 2, 3, 4]]    # ["Array", 1, 4]
+```
+
+#### Element and NotElement
+CortexJS's names for the existing `In`/`Not_in`, in the same argument order (`["Element", value, collection]`, matching mathematical `x ∈ S`).
+
+```python
+["Element", 2, ["Array", 1, 2, 3]]                                  # True
+["NotElement", 9, ["Array", 1, 2, 3]]                               # True
 ```
 
 ---
@@ -1259,6 +1459,121 @@ Advanced function for checking if a sublist within an array matches specific con
 
 ---
 
+## String Functions
+
+### String and StringJoin
+`String` concatenates the default string representation of each argument directly. `StringJoin` joins the elements of a single array, with an optional separator. Distinct from `Str` (a single-argument stringifier) and from `Join` (which concatenates multiple *arrays*, not strings - CortexJS's own `Join` is polymorphic, but this solver keeps `Join` array-only and gives strings their own dedicated name).
+
+```python
+["String", "a", 1, "b"]                            # "a1b"
+["StringJoin", ["Array", "a", "b", "c"]]           # "abc"
+["StringJoin", ["Array", "a", "b", "c"], "-"]      # "a-b-c"
+```
+
+### Case and Whitespace
+```python
+["ToUpperCase", "hello"]                           # "HELLO"
+["ToLowerCase", "HELLO"]                           # "hello"
+["CaseFold", "STRASSE"]                            # "strasse" (for case-insensitive comparison)
+["Trim", "  hi  "]                                 # "hi"
+["TrimStart", "  hi  "]                            # "hi  "
+["TrimEnd", "  hi  "]                              # "  hi"
+```
+
+### StringSplit, StringReplace, StringCompare
+`StringSplit` splits on whitespace by default, or on a literal separator if given. `StringReplace` replaces every occurrence of a literal substring (not pattern-based - see [Pattern Matching](#pattern-matching) for that). `StringCompare` returns -1, 0, or 1 by code-point sequence.
+
+```python
+["StringSplit", "a b  c"]                          # ["Array", "a", "b", "c"]
+["StringSplit", "a,b,c", ","]                      # ["Array", "a", "b", "c"]
+["StringReplace", "foo bar foo", "foo", "baz"]     # "baz bar baz"
+["StringCompare", "abc", "abd"]                    # -1
+["StringCompare", "abc", "abc"]                    # 0
+```
+
+### StringRepeat, PadStart, PadEnd
+Capped at 100,000 characters, since their length is otherwise a direct, user-controlled memory-exhaustion vector.
+
+```python
+["StringRepeat", "ab", 3]                          # "ababab"
+["PadStart", "7", 3, "0"]                          # "007"
+["PadEnd", "7", 3, "0"]                             # "700"
+["PadStart", "hello", 3]                           # "hello" (already long enough, pad char defaults to " ")
+```
+
+### Characters and GraphemeClusters
+Splits a string into a list of its characters. Approximated at the Unicode code-point level (Python `str` iteration) rather than true extended grapheme clusters, which would need a dependency this solver doesn't otherwise require - a multi-codepoint grapheme (e.g. an emoji with a modifier) is split into its constituent code points rather than kept whole. `GraphemeClusters` is a CortexJS synonym for the same function.
+
+```python
+["Characters", "abc"]                              # ["Array", "a", "b", "c"]
+```
+
+### Encoding: Utf8, Utf16, UnicodeScalars, StringFrom
+Convert a string to a list of code units in a given encoding, and back. `StringFrom`'s `encoding` argument is one of `"utf-8"`, `"utf-16"`, `"unicode-scalars"`.
+
+```python
+["Utf8", "hi"]                                     # ["Array", 104, 105]
+["Utf16", "hi"]                                    # ["Array", 104, 105]
+["UnicodeScalars", "hi"]                           # ["Array", 104, 105]
+["StringFrom", ["Array", 104, 105], "utf-8"]       # "hi"
+```
+
+### IntegerString, DigitsFrom, NumberFrom
+Convert integers to/from a string representation in an arbitrary base (2-36, default 10). `NumberFrom` parses a general numeric literal (integer, decimal, or scientific notation).
+
+```python
+["IntegerString", 255, 16]                         # "ff"
+["IntegerString", -255, 16]                        # "-ff"
+["DigitsFrom", "ff", 16]                            # 255
+["NumberFrom", "3.14e2"]                            # 314.0
+```
+
+---
+
+## Pattern Matching
+
+`RegExp`, `IsMatch`, `StringMatch`, and `StringMatchAll` require the optional `regex` extra:
+
+```bash
+pip install mathjson-solver[regex]
+```
+
+This installs [RE2](https://github.com/google/re2), used instead of Python's `re`. RE2 matches via automaton simulation instead of backtracking, so it's mathematically incapable of catastrophic backtracking (ReDoS) - a real risk for a solver that evaluates untrusted expressions with no execution budget of its own, since a single crafted pattern can hang a backtracking engine indefinitely regardless of input size. The trade-off: **no backreferences or lookahead/lookbehind** (inherently backtracking-only features no linear-time engine can offer). Everything else you'd expect works: character classes, quantifiers, alternation, anchors, capturing groups (including named groups), and inline flags.
+
+If the `regex` extra isn't installed, calling any of these functions raises a clear `ImportError` explaining how to install it.
+
+### RegExp
+Compiles a pattern (optional `i`/`m`/`s` flags: case-insensitive, multiline anchors, dot-matches-newline) into a reusable value, for passing to `IsMatch`/`StringMatch`/`StringMatchAll`. A bare pattern string works too, everywhere a pattern is expected - `RegExp` is only needed for flags or to reuse a compiled pattern.
+
+```python
+["RegExp", "hello", "i"]                           # a reusable case-insensitive pattern value
+```
+
+### IsMatch
+Whether a string contains a match for a pattern (a bare string, or a `RegExp` value) anywhere within it.
+
+```python
+["IsMatch", "hello world", "wor.d"]                # True
+["IsMatch", "HELLO", ["RegExp", "hello", "i"]]     # True
+["IsMatch", "HELLO", "hello"]                      # False (case-sensitive without the "i" flag)
+```
+
+### StringMatch and StringMatchAll
+`StringMatch` returns the first match; `StringMatchAll` returns every non-overlapping match. Each match is `["Array", matched_text, start, end, ["Array", group, ...]]` (1-indexed `start`, exclusive `end`, matching this solver's other CortexJS-index conventions). `StringMatch` returns `None` if there's no match.
+
+```python
+["StringMatch", "contact: alice@example", r"(\w+)@(\w+)"]
+  # ["Array", "alice@example", 10, 22, ["Array", "alice", "example"]]
+
+["StringMatchAll", "a1 b22 c333", r"\d+"]
+  # ["Array",
+  #   ["Array", "1", 2, 2, ["Array"]],
+  #   ["Array", "22", 5, 6, ["Array"]],
+  #   ["Array", "333", 9, 11, ["Array"]]]
+```
+
+---
+
 ## Integration Functions
 
 ### Variable
@@ -1410,22 +1725,27 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Factorial, Binomial](#number-theory-and-special-functions) - Factorial, binomial coefficient
 - [IsPrime](#number-theory-and-special-functions) - Primality test
 - [Erf, Erfc](#number-theory-and-special-functions) - Error function and its complement
+- [MachineEpsilon, CatalanConstant, EulerGamma](#constants) - More constants
+- [Rational, Numerator, Denominator](#rational-numbers) - Rational number support (approximate)
 
 ### Comparison Operations
 - [Equal](#equality) - Flexible equality (bool/int aware)
 - [StrictEqual](#equality) - Strict equality
+- [IdenticallyEqual](#identicallyequal) - Strict equality that also requires matching types
 - [NotEqual](#equality) - Inequality
 - [Greater](#comparison) - Greater than
 - [GreaterEqual](#comparison) - Greater than or equal
 - [Less](#comparison) - Less than
 - [LessEqual](#comparison) - Less than or equal
+- [Congruent](#congruent) - Modular congruence
 - [IsTrue](#istrue-and-isfalse) - Explicit truthiness check
 - [IsFalse](#istrue-and-isfalse) - Explicit falsiness check
 
 ### Control Flow
-- [Constants](#constants) - Define constants
+- [Constants](#constants-1) - Define constants
 - [If](#if-statement) - Conditional statements (Python pair form and CortexJS flat form)
-- [Switch / Which](#switch-case-statement) - Switch-case statements
+- [Switch](#switch-case-statement) - Value-equality switch-case statement
+- [Which](#which) - CortexJS multi-branch conditional (flat condition/value chain, not the same as `Switch`)
 
 ### Arrays and Aggregation
 - [Array / List](#array) - Array creation and manipulation
@@ -1433,12 +1753,15 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Max](#max) - Maximum value (list or variadic)
 - [Min](#min) - Minimum value (list or variadic)
 - [Median](#median) - Median value
-- [Variance, StandardDeviation](#variance-and-standarddeviation) - Dispersion statistics
+- [Mode](#mode) - Most frequently occurring value
+- [Variance, StandardDeviation, PopulationVariance, PopulationStandardDeviation](#variance-and-standarddeviation) - Dispersion statistics
+- [Quartiles, InterquartileRange](#quartiles-and-interquartilerange) - Quartile statistics
+- [Covariance, Correlation](#covariance-and-correlation) - Two-array statistics
 - [Length / Count](#length-alias-count) - Array length
-- [First, Last, Rest, Most](#first-last-rest-most) - Access or trim array ends
+- [First, Second, Third, Last, Rest, Most](#first-second-third-last-rest-most) - Access or trim array ends
 - [Reverse, Sort](#reverse-and-sort) - Reverse or sort an array
 - [IsEmpty](#isempty) - Check if array is empty
-- [Unique](#unique) - Remove duplicates
+- [Unique, Dedup](#unique-and-dedup) - Remove duplicates (all, or consecutive-only)
 - [Join](#join) - Concatenate arrays
 - [Zip](#zip) - Pair up elements from arrays
 - [At](#at) - 1-indexed element access
@@ -1446,6 +1769,13 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [GenerateRange](#generaterange) - Generate sequential number arrays (0-indexed)
 - [AtIndex](#atindex) - Get element at specific index (0-indexed)
 - [Slice](#slice) - Extract array portion
+- [Take, Drop, TakeWhile, DropWhile](#take-and-drop) - Slice by count or predicate
+- [Contains, IndexOf, IndexWhere, Find, CountIf, Position](#contains-indexof-indexwhere-find-countif-position) - Searching and testing
+- [RotateLeft, RotateRight](#rotateleft-and-rotateright) - Circular shift
+- [MaxBy, MinBy, ArgMax, ArgMin, Ordering](#maxby-minby-argmax-argmin-ordering) - Key-based extrema and sort order
+- [FlatMap, Scan, Differences, Fold](#flatmap-scan-differences-fold) - Transformation
+- [Insert, DeleteAt, ReplaceAt, Append](#insert-deleteat-replaceat-append) - Editing
+- [Partition, Chunk, GroupBy, ChunkBy, Tally](#partition-chunk-groupby-chunkby-tally) - Grouping
 - [CumulativeProduct](#cumulativeproduct) - Cumulative product calculation
 - [CumulativeSum](#cumulativesum) - Cumulative sum calculation
 - [Reduce](#reduce) - Reduce array to single value (CortexJS `fn` form or Python accumulator form)
@@ -1453,6 +1783,7 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Appended](#appended) - Append value to array
 
 ### Boolean and Set Operations
+- [Boolean Literals (`True`/`False`)](#boolean-literals) - Bare boolean symbols
 - [Any](#any) - Check if any element is truthy
 - [All](#all) - Check if all elements are truthy
 - [Not](#not) - Logical negation
@@ -1464,6 +1795,9 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Contains_any_of / ContainsAnyOf](#contains_any_of--containsanyof) - Check overlap
 - [Contains_all_of / ContainsAllOf](#contains_all_of--containsallof) - Check subset
 - [Contains_none_of / ContainsNoneOf](#contains_none_of--containsnoneof) - Check disjoint
+- [Union, Intersection](#union-and-intersection) - Combine or overlap two or more arrays
+- [SetMinus, SymmetricDifference](#setminus-and-symmetricdifference) - Array difference operations
+- [Element, NotElement](#element-and-notelement) - CortexJS names for `In`/`Not_in`
 
 ### Type Conversion
 - [Int](#int) - Convert to integer
@@ -1502,6 +1836,22 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Map / StrictMap](#map) - Apply function to array elements
 - [Filter](#filter) - Keep array elements matching a condition
 - [HasMatchingSublist](#hasmatchingsublist) - Advanced sublist matching
+
+### String Functions
+- [String, StringJoin](#string-and-stringjoin) - Concatenate values or join an array of strings
+- [ToUpperCase, ToLowerCase, CaseFold](#case-and-whitespace) - Case conversion
+- [Trim, TrimStart, TrimEnd](#case-and-whitespace) - Whitespace trimming
+- [StringSplit, StringReplace, StringCompare](#stringsplit-stringreplace-stringcompare) - Splitting, literal replace, ordering
+- [StringRepeat, PadStart, PadEnd](#stringrepeat-padstart-padend) - Repetition and padding (length-capped)
+- [Characters / GraphemeClusters](#characters-and-graphemeclusters) - Split into characters
+- [Utf8, Utf16, UnicodeScalars, StringFrom](#encoding-utf8-utf16-unicodescalars-stringfrom) - Encode/decode code units
+- [IntegerString, DigitsFrom, NumberFrom](#integerstring-digitsfrom-numberfrom) - Base conversion and number parsing
+
+### Pattern Matching
+*(requires the optional `regex` extra: `pip install mathjson-solver[regex]`)*
+- [RegExp](#regexp) - Compile a reusable pattern (RE2 syntax, optional flags)
+- [IsMatch](#ismatch) - Test whether a string contains a match
+- [StringMatch, StringMatchAll](#stringmatch-and-stringmatchall) - Find first or all matches, with capture groups
 
 ### Integration Functions
 - [Function](#function) - CortexJS-style lambda, for use with Map/Filter/Reduce
