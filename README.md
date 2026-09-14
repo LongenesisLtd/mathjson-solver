@@ -115,32 +115,19 @@ A blacklisted name that isn't an actual construct (a typo, for instance) is sile
 
 ## Supported Operations
 
-The library supports 330 MathJSON constructs, covering:
+330 MathJSON constructs across arithmetic, trigonometry, logarithms, comparisons, logic and sets, statistics and probability distributions, functional programming (Map/Reduce/Filter), arrays and collections, control flow, strings and RE2-backed pattern matching, date/time, number theory, special functions (Bessel/Airy/Gamma/elliptic-integral/hypergeometric families), combinatorics, and structural introspection.
 
-* **Arithmetic:** Add, Sum, Subtract, Multiply, Divide, Negate, Power, Square, Root, Sqrt, Abs, Round, Floor, Ceil
-* **Trigonometry:** Sin, Cos, Tan, Arcsin, Arccos, Arctan, Arctan2, Cot, Sec, Csc (+ inverses), Sinh, Cosh, Tanh, Coth, Sech, Csch (+ inverses), Hypot, Sinc
-* **Logarithms:** Log (base 10, or base b), Log2/Lb, Log10/Lg, Ln (natural log), LogOnePlus, Exp
-* **Comparison:** Equal, StrictEqual, IdenticallyEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual, Congruent
-* **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In/Element, NotIn/NotElement, ContainsAnyOf, ContainsAllOf, ContainsNoneOf, bare `True`/`False` literals, Union, Intersection, SetMinus, SymmetricDifference (over arrays - no dedicated Set type)
-* **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Mode, Variance, StandardDeviation, PopulationVariance, PopulationStandardDeviation, Quartiles, InterquartileRange, Covariance, Correlation, Skewness, Kurtosis, LinearRegression, PolynomialFit, Length/Count
-* **Probability Distributions:** NormalDistribution, BinomialDistribution, PoissonDistribution, UniformDistribution, ExponentialDistribution, queried via PDF, CDF, Quantile (e.g. `["CDF", ["NormalDistribution", 0, 1], 1.5]`). No optional dependency needed for PDF on any distribution, or for CDF/Quantile on Normal/Uniform/Exponential — only Binomial/Poisson's CDF and Quantile require the `special-functions` extra
-* **Functional Programming:** Map/StrictMap, Reduce, Filter, Product (all also accept CortexJS calling conventions, including `Function` lambdas)
-* **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended/Append, First, Second, Third, Last, Rest, Most, Reverse, Sort, Unique, Dedup, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct, Take, Drop, TakeWhile, DropWhile, Contains, IndexOf, IndexWhere, Find, CountIf, Position, RotateLeft, RotateRight, MaxBy, MinBy, ArgMax, ArgMin, Ordering, FlatMap, Scan, Differences, Fold, Insert, DeleteAt, ReplaceAt, Partition, Chunk, GroupBy, ChunkBy, Tally
-* **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch/StrictSwitch (value-equality case dispatch), Which (CortexJS flat condition/value chain), Constants definition
-* **Type Conversion:** Int, Float, Str, IsDefined
-* **Strings:** String, StringJoin, ToUpperCase, ToLowerCase, CaseFold, Trim, TrimStart, TrimEnd, StringSplit, StringReplace, StringCompare, StringRepeat, PadStart, PadEnd, Characters/GraphemeClusters, Utf8, Utf16, UnicodeScalars, StringFrom, IntegerString, DigitsFrom, NumberFrom
-* **Pattern Matching (requires the optional `regex` extra, `pip install mathjson-solver[regex]`):** RegExp, IsMatch, StringMatch, StringMatchAll — backed by [RE2](https://github.com/google/re2) rather than Python's `re`, for a hard guarantee against catastrophic backtracking (no backreferences/lookaround, as a deliberate trade-off for that guarantee)
-* **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
-* **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc, Rational, Numerator, Denominator, MachineEpsilon, CatalanConstant, EulerGamma, PowerMod, ModularInverse, IntegerSqrt, FactorInteger, PrimeFactors, PrimeNu, PrimeOmega, Radical, IsSquareFree, Divisors, Sigma0, Sigma1, SigmaMinus1, DivisorSigma, Divides, Totient, IsPerfectPower, NthPrime, NextPrime, PrimePi, ExtendedGCD, ChineseRemainder, CarmichaelLambda, JacobiSymbol, LegendreSymbol, MultiplicativeOrder, PrimitiveRoot, LucasL, CatalanNumber, BernoulliB, ContinuedFraction, FromContinuedFraction, IntegerDigits, DigitCount, DigitSum, FromDigits, IsSquare, IsTriangular, IsPentagonal, IsOctahedral, IsCenteredSquare, IsPerfect, IsAbundant, IsHappy
-* **Special Functions:** Gamma, GammaLn, Beta, Factorial2, ErfInv, LambertW, AGM, EllipticK, EllipticE, Hypergeometric1F1, Hypergeometric2F1
-* **Special Functions (requires the optional `special-functions` extra, `pip install mathjson-solver[special-functions]`):** BesselJ, BesselY, BesselI, BesselK, AiryAi, AiryBi, AiryAiPrime, AiryBiPrime, Zeta, GammaRegularized, BetaRegularized — backed by [scipy](https://scipy.org/)
-* **Combinatorics:** Choose, Fibonacci, Multinomial, Subfactorial, BellNumber, PowerSet, Permutations, Combinations, CartesianProduct (the last four have no output-size limit - see [Restricting Available Functions](#restricting-available-functions))
-* **Core (structural introspection):** Head, Tail, Hold, Identity, Type, IsSame, Same
-* **Integration (requires the optional `integration` extra, `pip install mathjson-solver[integration]`):** TrapezoidalIntegrate. Also in this group but with no extra dependency: Interp, FindIntervalIndex, Variable references
-* **Advanced:** HasMatchingSublist for pattern matching
-* **Constants:** Pi, Degrees, ExponentialE, GoldenRatio
+```python
+["Add", 1, 2, ["Multiply", 3, 4]]                # 15
+["CDF", ["NormalDistribution", 0, 1], 1.96]      # 0.975 (z-score to percentile)
+["Reduce", ["Array", 1, 2, 3, 4], ["Add"]]       # 10
+["StringMatch", "patient-042", "[0-9]+"]         # "042" at position 9-11
+["FactorInteger", 360]                           # [[2,3], [3,2], [5,1]]  (2³·3²·5)
+```
 
-[View complete documentation with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
+Three optional extras unlock specific functions — see [Installation](#installation) above: `regex` (RE2-backed pattern matching), `integration` (`TrapezoidalIntegrate`), `special-functions` (Bessel/Airy/Zeta/regularized gamma and beta, plus `CDF`/`Quantile` on the two discrete probability distributions).
+
+[View the complete function reference with examples →](https://github.com/LongenesisLtd/mathjson-solver/blob/main/docs/README.md)
 
 ## Error Handling
 
