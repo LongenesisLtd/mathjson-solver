@@ -268,6 +268,9 @@ def TrapezoidalIntegrate(f, c, solver_parameters, s):
 
     # Calculate the integral using the trapezoidal rule
 
+    # Bind into a copy, not the caller's `c` - see `f`'s own comment on
+    # this convention.
+    c = dict(c)
     values = []
     for x in t:
         variable_name = variable[1]

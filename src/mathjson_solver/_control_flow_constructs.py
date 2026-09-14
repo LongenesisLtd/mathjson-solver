@@ -12,6 +12,10 @@ from ._common import (
 
 
 def Constants(f, c, solver_parameters, s):
+    # Bind into a copy, not the caller's `c` - these bindings must be
+    # visible to the rest of this Constants block but not leak back out
+    # once it returns (see `f`'s own comment on this convention).
+    c = dict(c)
     for x in s[1:-1]:
         try:
             c[x[0]] = f(x[1], c)
