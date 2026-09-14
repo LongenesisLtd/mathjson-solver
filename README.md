@@ -153,11 +153,15 @@ except MathJSONException as e:
 
 ## Use Cases
 
+**The core pattern:** if your Python backend accepts user-provided datapoints *and* user-provided math to apply to them, mathjson-solver is the engine for that — it evaluates the formula without needing to trust either the formula's author or the data's source. A survey platform is a natural fit: a survey and its "calculated answers" both come from the same untrusted party (the survey builder), the calculation runs against whatever the respondent enters, and the result has to be safe to compute no matter what either of them contains. The same shape covers pricing rules, scoring algorithms, and scientific or medical calculators wherever the formula itself isn't fixed at development time — for example, a breast-cancer risk calculator implementing the Gail model, numerical integration included, entirely in MathJSON.
+
 * **Dynamic Formulas:** Let users create custom calculations in web applications
 * **Scientific Computing:** Evaluate mathematical models with variable parameters
 * **Business Logic:** Process complex pricing rules or scoring algorithms
 * **Data Processing:** Apply mathematical transformations to datasets
 * **Health Applications:** Calculate medical scores, dosages, or risk assessments
+
+**What's still missing:** a ready-to-use, user-facing editor for authoring MathJSON itself — today, the expressions have to come from somewhere else (a form builder, a generated JSON structure, hand-written JSON). CortexJS ships [MathLive's mathfield](https://mathlive.io/mathfield/) for entering math, but it's built for typing LaTeX-style notation (e-learning quizzes, scientific computing, calculators) — not for assembling a formula that references named fields from a form. Worth evaluating on its own merits rather than assumed to transfer.
 
 ## Testing
 
