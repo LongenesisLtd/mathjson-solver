@@ -4,7 +4,14 @@ _special_functions.py.
 """
 
 import math
-from ._special_functions import _agm, _elliptic_k_e, _erf_inv, _lambert_w
+from ._special_functions import (
+    _agm,
+    _elliptic_k_e,
+    _erf_inv,
+    _hyp1f1,
+    _hyp2f1,
+    _lambert_w,
+)
 
 # --- Special functions ---
 
@@ -41,3 +48,13 @@ def EllipticK(f, c, solver_parameters, s):
 
 def EllipticE(f, c, solver_parameters, s):
     return _elliptic_k_e(f(s[1], c))[1]
+
+
+def Hypergeometric1F1(f, c, solver_parameters, s):
+    """["Hypergeometric1F1", a, b, z] - confluent hypergeometric function 1F1(a;b;z)."""
+    return _hyp1f1(f(s[1], c), f(s[2], c), f(s[3], c))
+
+
+def Hypergeometric2F1(f, c, solver_parameters, s):
+    """["Hypergeometric2F1", a, b, c, z] - Gauss hypergeometric function 2F1(a,b;c;z)."""
+    return _hyp2f1(f(s[1], c), f(s[2], c), f(s[3], c), f(s[4], c))

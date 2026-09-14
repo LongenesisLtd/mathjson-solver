@@ -241,6 +241,8 @@ from ._special_function_constructs import (
     AGM,
     EllipticK,
     EllipticE,
+    Hypergeometric1F1,
+    Hypergeometric2F1,
 )
 from ._statistics_constructs import (
     Variance,
@@ -609,6 +611,8 @@ constructs = {
     "AGM": AGM,
     "EllipticK": EllipticK,
     "EllipticE": EllipticE,
+    "Hypergeometric1F1": Hypergeometric1F1,
+    "Hypergeometric2F1": Hypergeometric2F1,
     # --- Combinatorics (trivial subset) ---
     "Choose": lambda f, c, solver_parameters, s: math.comb(
         int(f(s[1], c)), int(f(s[2], c))
@@ -1043,6 +1047,8 @@ def extract_variables(
         "AGM",
         "EllipticK",
         "EllipticE",
+        "Hypergeometric1F1",
+        "Hypergeometric2F1",
         "Choose",
         "Fibonacci",
         "Multinomial",

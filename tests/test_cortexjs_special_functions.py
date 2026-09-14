@@ -42,6 +42,30 @@ from mathjson_solver import create_solver
             ["Round", ["EllipticE", 0.5], 10],
             round(1.3506438810476755, 10),
         ),
+        # --- Hypergeometric: verified against CortexJS's own documented
+        # examples and against mpmath across several a/b/(c)/z combinations
+        # (see _special_functions.py's docstrings) ---
+        (
+            {},
+            ["Round", ["Hypergeometric1F1", 1, 2, 2], 10],
+            round(3.19452804946533, 10),
+        ),
+        (
+            {},
+            ["Round", ["Hypergeometric2F1", 1, 1, 2, 0.5], 10],
+            round(1.38629436111989, 10),
+        ),
+        # 1F1(a,a,z) = e^z (a closed-form identity, independent check)
+        ({}, ["Round", ["Hypergeometric1F1", 3, 3, 1], 10], round(math.e, 10)),
+        # Kummer's transformation path (z < 0) - without it, this
+        # particular a/b/z combination is off by a factor of ~1750.
+        (
+            {},
+            ["Round", ["Hypergeometric1F1", 10, 1.5, -20], 12],
+            round(-1.17307479e-06, 12),
+        ),
+        # 2F1(a,b;b;z) = (1-z)^-a (a closed-form identity, independent check)
+        ({}, ["Round", ["Hypergeometric2F1", 2, 3, 3, 0.3], 10], round((1 - 0.3) ** -2, 10)),
     ],
 )
 def test_special_functions(parameters, expression, expected_result):
@@ -69,3 +93,21 @@ def test_elliptic_functions_reject_out_of_domain():
         solver(["EllipticK", -0.5])
     with pytest.raises(Exception):
         solver(["EllipticK", 1.5])
+
+
+def test_hypergeometric1f1_rejects_out_of_domain():
+    solver = create_solver({})
+    with pytest.raises(Exception):
+        solver(["Hypergeometric1F1", 1, 2, 501])
+    with pytest.raises(Exception):
+        solver(["Hypergeometric1F1", 1, 2, -501])
+
+
+def test_hypergeometric2f1_rejects_out_of_domain():
+    solver = create_solver({})
+    with pytest.raises(Exception):
+        solver(["Hypergeometric2F1", 1, 1, 2, 1])
+    with pytest.raises(Exception):
+        solver(["Hypergeometric2F1", 1, 1, 2, -1])
+    with pytest.raises(Exception):
+        solver(["Hypergeometric2F1", 1, 1, 2, 1.5])
