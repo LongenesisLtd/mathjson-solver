@@ -34,6 +34,7 @@ pip install mathjson-solver
 **Optional:**
 - `pip install mathjson-solver[integration]` (installs numpy; only required for `TrapezoidalIntegrate`)
 - `pip install mathjson-solver[regex]` (installs [google-re2](https://pypi.org/project/google-re2/); only required for `RegExp`/`IsMatch`/`StringMatch`/`StringMatchAll`)
+- `pip install mathjson-solver[special-functions]` (installs [scipy](https://scipy.org/); only required for `BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi`/`AiryAiPrime`/`AiryBiPrime`, `Zeta`, `GammaRegularized`, `BetaRegularized`)
 
 ## Quick Start
 
@@ -128,7 +129,8 @@ The library supports a comprehensive set of mathematical operations:
 * **Pattern Matching (requires the optional `regex` extra, `pip install mathjson-solver[regex]`):** RegExp, IsMatch, StringMatch, StringMatchAll — backed by [RE2](https://github.com/google/re2) rather than Python's `re`, for a hard guarantee against catastrophic backtracking (no backreferences/lookaround, as a deliberate trade-off for that guarantee)
 * **Date/Time:** Strptime, Strftime, Today, Now, TimeDelta functions (Weeks, Days, Hours, Minutes)
 * **Number Theory:** Chop, Mod, Clamp, GCD, LCM, Factorial, Binomial, IsPrime, Erf, Erfc, Rational, Numerator, Denominator, MachineEpsilon, CatalanConstant, EulerGamma, PowerMod, ModularInverse, IntegerSqrt, FactorInteger, PrimeFactors, PrimeNu, PrimeOmega, Radical, IsSquareFree, Divisors, Sigma0, Sigma1, SigmaMinus1, DivisorSigma, Divides, Totient, IsPerfectPower, NthPrime, NextPrime, PrimePi, ExtendedGCD, ChineseRemainder, CarmichaelLambda, JacobiSymbol, LegendreSymbol, MultiplicativeOrder, PrimitiveRoot, LucasL, CatalanNumber, BernoulliB, ContinuedFraction, FromContinuedFraction, IntegerDigits, DigitCount, DigitSum, FromDigits, IsSquare, IsTriangular, IsPentagonal, IsOctahedral, IsCenteredSquare, IsPerfect, IsAbundant, IsHappy
-* **Special Functions:** Gamma, GammaLn, Beta, Factorial2, ErfInv, LambertW, AGM, EllipticK, EllipticE
+* **Special Functions:** Gamma, GammaLn, Beta, Factorial2, ErfInv, LambertW, AGM, EllipticK, EllipticE, Hypergeometric1F1, Hypergeometric2F1
+* **Special Functions (requires the optional `special-functions` extra, `pip install mathjson-solver[special-functions]`):** BesselJ, BesselY, BesselI, BesselK, AiryAi, AiryBi, AiryAiPrime, AiryBiPrime, Zeta, GammaRegularized, BetaRegularized — backed by [scipy](https://scipy.org/)
 * **Combinatorics:** Choose, Fibonacci, Multinomial, Subfactorial, BellNumber, PowerSet, Permutations, Combinations, CartesianProduct (the last four have no output-size limit - see [Restricting Available Functions](#restricting-available-functions))
 * **Core (structural introspection):** Head, Tail, Hold, Identity, Type, IsSame, Same
 * **Integration (requires the optional `integration` extra, `pip install mathjson-solver[integration]`):** TrapezoidalIntegrate. Also in this group but with no extra dependency: Interp, FindIntervalIndex, Variable references

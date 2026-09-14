@@ -3,6 +3,14 @@ import os
 import math
 import pytest
 
+SCIPY_AVAILABLE = False
+try:
+    import scipy  # noqa: F401
+
+    SCIPY_AVAILABLE = True
+except ImportError:
+    pass
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src/"))
 
 from mathjson_solver import create_solver
@@ -111,3 +119,49 @@ def test_hypergeometric2f1_rejects_out_of_domain():
         solver(["Hypergeometric2F1", 1, 1, 2, -1])
     with pytest.raises(Exception):
         solver(["Hypergeometric2F1", 1, 1, 2, 1.5])
+
+
+@pytest.mark.skipif(not SCIPY_AVAILABLE, reason="scipy not available")
+@pytest.mark.parametrize(
+    "parameters, expression, expected_result",
+    [
+        # --- verified against CortexJS's own documented examples ---
+        ({}, ["Round", ["BesselJ", 0, 1], 4], 0.7652),
+        ({}, ["Round", ["BesselY", 0, 1], 4], 0.0883),
+        ({}, ["Round", ["BesselI", 0, 1], 4], 1.2661),
+        ({}, ["Round", ["BesselK", 0, 1], 4], 0.421),
+        ({}, ["Round", ["AiryAi", 0], 4], 0.355),
+        ({}, ["Round", ["AiryBi", 0], 4], 0.6149),
+        ({}, ["Round", ["AiryAiPrime", 0], 4], -0.2588),
+        ({}, ["Round", ["AiryBiPrime", 0], 4], 0.4483),
+        ({}, ["Round", ["Zeta", 2], 6], round(math.pi**2 / 6, 6)),
+        (
+            {},
+            ["Round", ["GammaRegularized", 3, 5], 10],
+            round(0.12465201948308115, 10),
+        ),
+        ({}, ["Round", ["BetaRegularized", 0.5, 2, 3], 10], 0.6875),
+    ],
+)
+def test_scipy_special_functions(parameters, expression, expected_result):
+    solver = create_solver(parameters)
+    assert solver(expression) == expected_result
+
+
+@pytest.mark.skipif(not SCIPY_AVAILABLE, reason="scipy not available")
+def test_gamma_regularized_is_the_upper_form_not_lower():
+    # Q(a,z), not P(a,z) - these are complements (Q = 1 - P) and would be
+    # easy to swap by mistake (scipy's own `gammainc` is the lower form,
+    # `gammaincc` the upper one CortexJS actually specifies). Matching
+    # the documented value directly rules out the swap: P(3,5) would be
+    # 0.8753479805169189 instead.
+    solver = create_solver({})
+    q = solver(["GammaRegularized", 3, 5])
+    assert abs(q - 0.12465201948308115) < 1e-9
+
+
+@pytest.mark.skipif(SCIPY_AVAILABLE, reason="test requires scipy to be ABSENT")
+def test_scipy_functions_raise_clear_error_without_scipy():
+    solver = create_solver({})
+    with pytest.raises(Exception):
+        solver(["BesselJ", 0, 1])

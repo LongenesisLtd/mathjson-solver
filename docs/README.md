@@ -460,15 +460,55 @@ defined for `x ≥ -1/e`.
 ["Round", ["EllipticE", 0.5], 5]   # 1.35064
 ```
 
+### Hypergeometric1F1, Hypergeometric2F1
+Confluent (`1F1`) and Gauss (`2F1`) hypergeometric functions, via their
+defining power series - verified against `mpmath` and CortexJS's own
+documented examples before shipping. `Hypergeometric1F1` is capped at
+`|z| ≤ 500` (the naive series overflows a float beyond that) and uses
+Kummer's transformation for `z < 0` to avoid catastrophic cancellation
+that would otherwise silently corrupt the result well within that
+range. `Hypergeometric2F1` only supports `|z| < 1`, its actual
+mathematical radius of convergence.
+
+```python
+["Round", ["Hypergeometric1F1", 1, 2, 2], 5]        # 3.19453
+["Round", ["Hypergeometric2F1", 1, 1, 2, 0.5], 5]   # 1.38629
+```
+
+### BesselJ, BesselY, BesselI, BesselK, AiryAi, AiryBi, AiryAiPrime, AiryBiPrime, Zeta, GammaRegularized, BetaRegularized
+Require the optional `special-functions` extra
+(`pip install mathjson-solver[special-functions]`), which installs
+[scipy](https://scipy.org/) - these need real numerical algorithms
+(stable series/asymptotic-expansion switching depending on argument
+regime) that this project doesn't reimplement from scratch, unlike the
+verified-in-house algorithms above. Thin wrappers around
+`scipy.special`, verified against CortexJS's own documented examples.
+Two argument-convention gotchas worth knowing, since they don't match
+`scipy`'s own conventions directly:
+- `GammaRegularized(a, z)` is the *upper* regularized incomplete gamma,
+  `Q(a, z) = Γ(a, z) / Γ(a)` - `scipy.special.gammainc` computes the
+  *lower* form (`P`); this uses `gammaincc` instead.
+- `BetaRegularized(x, a, b)` puts `x` first, while
+  `scipy.special.betainc` takes `(a, b, x)`.
+
+```python
+["Round", ["BesselJ", 0, 1], 4]              # 0.7652
+["Round", ["AiryAi", 0], 4]                  # 0.355
+["Round", ["Zeta", 2], 6]                    # 1.644934  (π²/6)
+["Round", ["GammaRegularized", 3, 5], 5]     # 0.12465
+["Round", ["BetaRegularized", 0.5, 2, 3], 4] # 0.6875
+```
+
+Without the extra installed, these constructs raise a clear
+`ImportError` (naming the missing package) rather than failing with an
+unrelated `ModuleNotFoundError` deep in the call stack.
+
 ### Deliberately excluded
-`BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi` (and their
-derivatives), `JacobiTheta`, `DedekindEta`, `Zeta`, `GammaRegularized`,
-`BetaRegularized` - these need real numerical algorithms (stable
-series/asymptotic-expansion switching depending on argument regime) to
-not be subtly wrong across their domain. Doing them properly means
-depending on `scipy`, a materially heavier dependency than `numpy`/
-`google-re2` - a separate dependency conversation, not a default
-inclusion.
+`JacobiTheta`, `DedekindEta` - `scipy.special` doesn't implement these
+either (no theta-function support), so the `special-functions` extra
+above doesn't unlock them. A from-scratch q-series implementation would
+carry the same "naive truncated series can be subtly wrong" risk noted
+elsewhere in this section - a separate decision, not bundled in here.
 
 ---
 
@@ -2090,6 +2130,8 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 ### Special Functions
 - [Gamma, GammaLn, Beta, Factorial2](#gamma-gammaln-beta-factorial2) - Gamma-based functions
 - [ErfInv, LambertW, AGM, EllipticK, EllipticE](#erfinv-lambertw-agm-elliptick-elliptice) - Verified iterative algorithms
+- [Hypergeometric1F1, Hypergeometric2F1](#hypergeometric1f1-hypergeometric2f1) - Confluent and Gauss hypergeometric functions
+- [BesselJ, BesselY, BesselI, BesselK, AiryAi, AiryBi, AiryAiPrime, AiryBiPrime, Zeta, GammaRegularized, BetaRegularized](#besselj-bessely-besseli-besselk-airyai-airybi-airyaiprime-airybiprime-zeta-gammaregularized-betaregularized) - Requires the optional `special-functions` extra (scipy)
 
 ### Combinatorics
 - [Choose, Fibonacci, Multinomial, Subfactorial, BellNumber](#combinatorics) - Counting functions with no explosion risk
