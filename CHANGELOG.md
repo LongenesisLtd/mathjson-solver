@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **More statistics:** `Skewness`, `Kurtosis` (sample-adjusted, matching Excel's `SKEW`/`KURT` and `scipy.stats.skew`/`kurtosis` with `bias=False`), `LinearRegression` (least-squares fit, returns `["Array", slope, intercept]`), `PolynomialFit` (least-squares fit of a given degree via the normal equations, no numpy dependency, returns `["Array", c0, c1, ..., cd]` - lowest degree first, the opposite order from `numpy.polyfit`). `PolynomialFit`'s degree is capped at 50.
+- **Probability distributions:** `NormalDistribution`, `BinomialDistribution`, `PoissonDistribution`, `UniformDistribution`, `ExponentialDistribution`, queried via `PDF`/`CDF`/`Quantile` (e.g. `["CDF", ["NormalDistribution", 0, 1], 1.5]`), matching CortexJS's calling convention. `PDF` needs no optional dependency for any of the five, including the two discrete distributions (uses a log-space reformulation - the direct formula overflows a float well within realistic `n`). `Binomial`/`PoissonDistribution`'s `CDF`/`Quantile` use the already-shipped `GammaRegularized`/`BetaRegularized` identities and so require the `special-functions` extra; the other three distributions' `CDF`/`Quantile` don't need it either.
 - **Number theory**, ~45 new functions:
   - stdlib-based: `PowerMod`, `ModularInverse`, `IntegerSqrt`
   - Factorization: `FactorInteger`, `PrimeFactors`, `PrimeNu`, `PrimeOmega`, `Radical`, `IsSquareFree`

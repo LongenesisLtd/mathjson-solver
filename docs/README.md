@@ -992,6 +992,21 @@ Sample-adjusted estimators - `Skewness` matches Excel's `SKEW` and `scipy.stats.
 ["PolynomialFit", ["Array", 0, 1, 2, 3, 4], ["Array", 3, 6, 11, 18, 27], 2]      # ≈ ["Array", 3.0, 2.0, 1.0] (y = x² + 2x + 3)
 ```
 
+#### Probability Distributions
+`NormalDistribution(mean, standardDeviation)`, `BinomialDistribution(n, p)`, `PoissonDistribution(lambda)`, `UniformDistribution(a, b)`, `ExponentialDistribution(lambda)` are "markers" - like `Function`, they return their own unevaluated expression rather than a computed value. `PDF`, `CDF`, and `Quantile` take one of these (inline, or via a solver parameter that holds one) as their first argument and do the actual computation, matching CortexJS's calling convention exactly.
+
+```python
+["PDF", ["BinomialDistribution", 4, ["Rational", 1, 2]], 2]   # 0.375
+["Round", ["CDF", ["NormalDistribution", 0, 1], 1], 5]        # 0.84134  (Φ(1))
+["Quantile", ["PoissonDistribution", 9], 0.95]                # 14
+
+# A distribution can also be a solver parameter, not just inline:
+solver = create_solver({"risk_model": ["NormalDistribution", 0, 1]})
+solver(["CDF", "risk_model", 1.5])
+```
+
+No optional dependency is needed for `PDF` on any of the five distributions, or for `CDF`/`Quantile` on `NormalDistribution`/`UniformDistribution`/`ExponentialDistribution`. Only `CDF`/`Quantile` on `BinomialDistribution`/`PoissonDistribution` require the `special-functions` extra (`pip install mathjson-solver[special-functions]`) - they're built on the already-shipped `GammaRegularized`/`BetaRegularized` (via the identities `P(X≤k) = Q(k+1,λ)` for Poisson and `P(X≤k) = I_{1-p}(n-k,k+1)` for Binomial), which is both far more numerically robust and much faster than direct summation for large `n`/`λ` - the direct formula (`math.comb(n,k) * p**k * (1-p)**(n-k)`) actually overflows a float at `n` as low as 10,000, well within a realistic input range, since `math.comb` alone produces an enormous intermediate integer there. `PDF` on these two avoids that same overflow via a log-space reformulation instead (no scipy needed).
+
 #### Length (alias: Count)
 Returns the number of elements in an array, including non-numeric elements like `None`. `Count` is the CortexJS name for the same function.
 
@@ -2175,6 +2190,7 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Covariance, Correlation](#covariance-and-correlation) - Two-array statistics
 - [Skewness, Kurtosis](#skewness-and-kurtosis) - Distribution shape statistics
 - [LinearRegression, PolynomialFit](#linearregression-and-polynomialfit) - Least-squares curve fitting
+- [NormalDistribution, BinomialDistribution, PoissonDistribution, UniformDistribution, ExponentialDistribution, PDF, CDF, Quantile](#probability-distributions) - Probability distributions
 - [Length / Count](#length-alias-count) - Array length
 - [First, Second, Third, Last, Rest, Most](#first-second-third-last-rest-most) - Access or trim array ends
 - [Reverse, Sort](#reverse-and-sort) - Reverse or sort an array

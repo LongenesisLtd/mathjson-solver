@@ -29,7 +29,10 @@ regex = ["google-re2"]
 # Bessel/Airy/Zeta/GammaRegularized/BetaRegularized need scipy.special -
 # real numerical algorithms (stable series/asymptotic-expansion
 # switching depending on argument regime), not something to reimplement
-# from scratch. Optional, same as `integration`/`regex` above.
+# from scratch. Also needed for CDF/Quantile on BinomialDistribution/
+# PoissonDistribution (built on GammaRegularized/BetaRegularized) - PDF
+# on those two, and everything on the other three distributions, needs
+# no optional dependency. Optional, same as `integration`/`regex` above.
 special-functions = ["scipy"]
 
 [project.urls]
