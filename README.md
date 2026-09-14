@@ -34,7 +34,9 @@ pip install mathjson-solver
 **Optional:**
 - `pip install mathjson-solver[integration]` (installs numpy; only required for `TrapezoidalIntegrate`)
 - `pip install mathjson-solver[regex]` (installs [google-re2](https://pypi.org/project/google-re2/); only required for `RegExp`/`IsMatch`/`StringMatch`/`StringMatchAll`)
-- `pip install mathjson-solver[special-functions]` (installs [scipy](https://scipy.org/); only required for `BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi`/`AiryAiPrime`/`AiryBiPrime`, `Zeta`, `GammaRegularized`, `BetaRegularized`)
+- `pip install mathjson-solver[special-functions]` (installs [scipy](https://scipy.org/); required for `BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi`/`AiryAiPrime`/`AiryBiPrime`, `Zeta`, `GammaRegularized`, `BetaRegularized`, and `CDF`/`Quantile` on `BinomialDistribution`/`PoissonDistribution`)
+
+Combine any of these by separating them with commas in one `pip install`, e.g. `pip install mathjson-solver[integration,regex,special-functions]` for all three at once.
 
 ## Quick Start
 
@@ -121,6 +123,7 @@ The library supports a comprehensive set of mathematical operations:
 * **Comparison:** Equal, StrictEqual, IdenticallyEqual, NotEqual, Greater, GreaterEqual, Less, LessEqual, Congruent
 * **Logic & Sets:** Any, All, Not, And, Or, Xor, Nand, Nor, Implies, Equivalent, In/Element, NotIn/NotElement, ContainsAnyOf, ContainsAllOf, ContainsNoneOf, bare `True`/`False` literals, Union, Intersection, SetMinus, SymmetricDifference (over arrays - no dedicated Set type)
 * **Statistics:** Average/Mean, Max, Min (both list and variadic forms), Median, Mode, Variance, StandardDeviation, PopulationVariance, PopulationStandardDeviation, Quartiles, InterquartileRange, Covariance, Correlation, Skewness, Kurtosis, LinearRegression, PolynomialFit, Length/Count
+* **Probability Distributions:** NormalDistribution, BinomialDistribution, PoissonDistribution, UniformDistribution, ExponentialDistribution, queried via PDF, CDF, Quantile (e.g. `["CDF", ["NormalDistribution", 0, 1], 1.5]`). No optional dependency needed for PDF on any distribution, or for CDF/Quantile on Normal/Uniform/Exponential — only Binomial/Poisson's CDF and Quantile require the `special-functions` extra
 * **Functional Programming:** Map/StrictMap, Reduce, Filter, Product (all also accept CortexJS calling conventions, including `Function` lambdas)
 * **Arrays:** Array/List creation, GenerateRange, Range, AtIndex, At, Slice, Appended/Append, First, Second, Third, Last, Rest, Most, Reverse, Sort, Unique, Dedup, Join, Zip, IsEmpty, CumulativeSum, CumulativeProduct, Take, Drop, TakeWhile, DropWhile, Contains, IndexOf, IndexWhere, Find, CountIf, Position, RotateLeft, RotateRight, MaxBy, MinBy, ArgMax, ArgMin, Ordering, FlatMap, Scan, Differences, Fold, Insert, DeleteAt, ReplaceAt, Partition, Chunk, GroupBy, ChunkBy, Tally
 * **Control Flow:** If statements (Python pair form and CortexJS flat form), Switch/StrictSwitch (value-equality case dispatch), Which (CortexJS flat condition/value chain), Constants definition
