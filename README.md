@@ -90,7 +90,7 @@ solver(["Reduce", ["Array", 1, 2, 3, 4], ["Add"]])                          # 10
 
 ## Supported Operations
 
-330 MathJSON constructs across arithmetic, trigonometry, logarithms, comparisons, logic and sets, statistics and probability distributions, functional programming (Map/Reduce/Filter), arrays and collections, control flow, strings and RE2-backed pattern matching, date/time, number theory, special functions (Bessel/Airy/Gamma/elliptic-integral/hypergeometric families), combinatorics, and structural introspection.
+338 MathJSON constructs across arithmetic, trigonometry, logarithms, comparisons, logic and sets, statistics and probability distributions, functional programming (Map/Reduce/Filter), arrays and collections, control flow, strings and RE2-backed pattern matching, date/time, number theory, special functions (Bessel/Airy/Gamma/elliptic-integral/hypergeometric families), combinatorics, and structural introspection.
 
 ```python
 ["Add", 1, 2, ["Multiply", 3, 4]]                # 15

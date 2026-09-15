@@ -598,6 +598,59 @@ def SymmetricDifference(f, c, solver_parameters, s):
     return ["Array"] + result
 
 
+def _is_subset(a_vals, b_vals):
+    """Every element of `a_vals` occurs in `b_vals` - the shared core of
+    SubsetEqual/Subset/Superset/SupersetEqual below. Uses plain `in`
+    checks against a list, not Python's `set`, matching the rest of this
+    file's set-algebra functions (arrays stand in for CortexJS's `Set`
+    here, and their elements aren't guaranteed hashable - e.g. an element
+    could itself be a nested array)."""
+    return all(v in b_vals for v in a_vals)
+
+
+def SubsetEqual(f, c, solver_parameters, s):
+    """["SubsetEqual", array1, array2] - A ⊆ B: every element of array1 occurs in array2."""
+    a = _arr_vals_of(f, c, solver_parameters, s[1])
+    b = _arr_vals_of(f, c, solver_parameters, s[2])
+    return _is_subset(a, b)
+
+
+def SupersetEqual(f, c, solver_parameters, s):
+    """["SupersetEqual", array1, array2] - A ⊇ B: every element of array2 occurs in array1."""
+    a = _arr_vals_of(f, c, solver_parameters, s[1])
+    b = _arr_vals_of(f, c, solver_parameters, s[2])
+    return _is_subset(b, a)
+
+
+def Subset(f, c, solver_parameters, s):
+    """
+    ["Subset", array1, array2] - A ⊂ B: a *proper* subset (A ⊆ B and
+    A ≠ B, treating both as sets of distinct elements - order and
+    duplicates don't affect the comparison, matching how Union/
+    Intersection/etc. above already treat arrays).
+    """
+    a = _arr_vals_of(f, c, solver_parameters, s[1])
+    b = _arr_vals_of(f, c, solver_parameters, s[2])
+    return _is_subset(a, b) and not _is_subset(b, a)
+
+
+def Superset(f, c, solver_parameters, s):
+    """["Superset", array1, array2] - A ⊃ B: a *proper* superset. See `Subset`."""
+    a = _arr_vals_of(f, c, solver_parameters, s[1])
+    b = _arr_vals_of(f, c, solver_parameters, s[2])
+    return _is_subset(b, a) and not _is_subset(a, b)
+
+
+def NotSubset(f, c, solver_parameters, s):
+    """["NotSubset", array1, array2] - A ⊄ B: the negation of `Subset` (proper subset), not of `SubsetEqual`."""
+    return not Subset(f, c, solver_parameters, s)
+
+
+def NotSuperset(f, c, solver_parameters, s):
+    """["NotSuperset", array1, array2] - A ⊅ B: the negation of `Superset` (proper superset), not of `SupersetEqual`."""
+    return not Superset(f, c, solver_parameters, s)
+
+
 def Any(f, c, solver_parameters, s):
     evaluated = f(s[1], c)
     if isinstance(evaluated, list) and evaluated[0] == "Array":
@@ -612,11 +665,70 @@ def All(f, c, solver_parameters, s):
     raise ValueError("Parameter 1 must be an array.")
 
 
+def Interval(f, c, solver_parameters, s):
+    """
+    ["Interval", lo, hi] - a closed numeric interval [lo, hi]. Wrap
+    either endpoint in ["Open", endpoint] to exclude it, matching
+    CortexJS's own convention (e.g. ["Interval", 0, ["Open", 1]] for
+    the half-open interval [0, 1)).
+
+    Like Function/NormalDistribution/etc. elsewhere in this solver, this
+    is a "marker" - it returns its own unevaluated expression rather
+    than a computed value. `In`/`Element` (below) are what actually
+    evaluate an interval's endpoints and test membership; Interval on
+    its own is only meaningful as their second argument.
+    """
+    return s
+
+
+def Open(f, c, solver_parameters, s):
+    """
+    ["Open", endpoint] - marks one endpoint of an Interval (above) as
+    excluded. Only meaningful nested inside an Interval; like Interval
+    itself, this is a marker construct, not something evaluated on its
+    own.
+    """
+    return s
+
+
+def _interval_bounds(f, c, solver_parameters, interval_expr):
+    """
+    Evaluate an ["Interval", lo, hi] expression's endpoints, resolving
+    each through `f` and honoring a per-endpoint ["Open", endpoint]
+    wrapper (excluded) vs. a bare endpoint (included, the default).
+    Returns (lo_value, lo_excluded, hi_value, hi_excluded).
+    """
+
+    def bound(raw):
+        if isinstance(raw, list) and raw and raw[0] == "Open":
+            return f(raw[1], c), True
+        return f(raw, c), False
+
+    lo_value, lo_excluded = bound(interval_expr[1])
+    hi_value, hi_excluded = bound(interval_expr[2])
+    return lo_value, lo_excluded, hi_value, hi_excluded
+
+
 def In(f, c, solver_parameters, s):
     if len(s) != 3:
         raise ValueError("Wrong parameters for 'In'")
     if isinstance(s[2], list) and s[2][0] == "Array":
         return f(s[1], c) in [f(x, c) for x in s[2][1:]]
+
+    elif isinstance(s[2], list) and s[2][0] == "Interval":
+        value = f(s[1], c)
+        lo, lo_excluded, hi, hi_excluded = _interval_bounds(
+            f, c, solver_parameters, s[2]
+        )
+        if lo_excluded and not (value > lo):
+            return False
+        if not lo_excluded and not (value >= lo):
+            return False
+        if hi_excluded and not (value < hi):
+            return False
+        if not hi_excluded and not (value <= hi):
+            return False
+        return True
 
     elif isinstance(s[2], str):
         return f(s[1], c) in f(s[2], c)

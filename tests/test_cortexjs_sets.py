@@ -61,8 +61,37 @@ from mathjson_solver import create_solver
         ({}, ["Element", 9, ["Array", 1, 2, 3]], False),
         ({}, ["NotElement", 9, ["Array", 1, 2, 3]], True),
         ({}, ["NotElement", 2, ["Array", 1, 2, 3]], False),
+        # --- Element / Interval: range membership, CortexJS's own
+        # convention for "x in [a, b]" (ce.parse("x \\in [0, 1]").json
+        # == ["Element", "x", ["Interval", 0, 1]]) - closed by default,
+        # ["Open", endpoint] to exclude that endpoint ---
+        ({}, ["Element", 0.5, ["Interval", 0, 1]], True),
+        ({}, ["Element", 1.5, ["Interval", 0, 1]], False),
+        ({}, ["Element", 1, ["Interval", 0, 1]], True),  # closed: endpoint included
+        ({}, ["Element", 0, ["Interval", 0, 1]], True),  # closed: endpoint included
+        ({}, ["Element", 1, ["Interval", 0, ["Open", 1]]], False),  # [0, 1): excluded
+        ({}, ["Element", 0, ["Interval", ["Open", 0], 1]], False),  # (0, 1]: excluded
+        ({}, ["NotElement", 5, ["Interval", 0, 1]], True),
+        ({"age": 45}, ["Element", "age", ["Interval", 40, 65]], True),
+        # --- Subset / SubsetEqual / Superset / SupersetEqual / NotSubset / NotSuperset ---
+        ({}, ["SubsetEqual", ["Array", 1, 2], ["Array", 1, 2, 3]], True),
+        ({}, ["Subset", ["Array", 1, 2], ["Array", 1, 2, 3]], True),
+        ({}, ["Subset", ["Array", 1, 2, 3], ["Array", 1, 2, 3]], False),  # equal, not proper
+        ({}, ["SubsetEqual", ["Array", 1, 2, 3], ["Array", 1, 2, 3]], True),
+        ({}, ["Superset", ["Array", 1, 2, 3], ["Array", 1, 2]], True),
+        ({}, ["Superset", ["Array", 1, 2], ["Array", 1, 2]], False),  # equal, not proper
+        ({}, ["SupersetEqual", ["Array", 1, 2], ["Array", 1, 2]], True),
+        ({}, ["NotSubset", ["Array", 1, 2, 3], ["Array", 1, 2, 3]], True),  # equal
+        ({}, ["NotSubset", ["Array", 1, 5], ["Array", 1, 2, 3]], True),  # not a subset at all
+        ({}, ["NotSuperset", ["Array", 1, 2], ["Array", 1, 2]], True),  # equal
     ],
 )
 def test_cortexjs_set_algebra(parameters, expression, expected_result):
     solver = create_solver(parameters)
     assert solver(expression) == expected_result
+
+
+def test_element_rejects_unrecognized_domain():
+    solver = create_solver({})
+    with pytest.raises(Exception):
+        solver(["Element", 5, ["NotADomain", 1, 2]])

@@ -127,8 +127,16 @@ from ._collection_constructs import (
     Intersection,
     SetMinus,
     SymmetricDifference,
+    Subset,
+    SubsetEqual,
+    Superset,
+    SupersetEqual,
+    NotSubset,
+    NotSuperset,
     Any,
     All,
+    Interval,
+    Open,
     In,
     Not_in,
     Contains_any_of,
@@ -430,7 +438,7 @@ constructs = {
     + [f(x, c) for x in s[1:]],  # CortexJS name for Array
     "In": In,
     "Not_in": Not_in,
-    "Element": In,  # CortexJS name for In (["Element", value, set])
+    "Element": In,  # CortexJS name for In - array, string, or Interval membership
     "NotElement": Not_in,  # CortexJS name for Not_in
     "Contains_any_of": Contains_any_of,
     "Contains_all_of": Contains_all_of,
@@ -743,6 +751,14 @@ constructs = {
     "Intersection": Intersection,
     "SetMinus": SetMinus,
     "SymmetricDifference": SymmetricDifference,
+    "Subset": Subset,
+    "SubsetEqual": SubsetEqual,
+    "Superset": Superset,
+    "SupersetEqual": SupersetEqual,
+    "NotSubset": NotSubset,
+    "NotSuperset": NotSuperset,
+    "Interval": Interval,
+    "Open": Open,
 }
 
 
@@ -1189,6 +1205,14 @@ def extract_variables(
         "Intersection",
         "SetMinus",
         "SymmetricDifference",
+        "Subset",
+        "SubsetEqual",
+        "Superset",
+        "SupersetEqual",
+        "NotSubset",
+        "NotSuperset",
+        "Interval",
+        "Open",
     ]
     if isinstance(s, str):
         if s in ignore_list:

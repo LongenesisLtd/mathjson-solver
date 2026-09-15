@@ -56,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Editing: `Append` (alias for the existing `Appended`), `Insert`, `DeleteAt`, `ReplaceAt`
   - Grouping: `Partition` (fixed chunk size), `Chunk` (fixed group count), `GroupBy`, `ChunkBy`, `Tally`
 - **Basic set algebra** over `Array`: `Union` and `Intersection` (variadic, deduplicated, order-preserving), `SetMinus`, `SymmetricDifference`, and `Element`/`NotElement` (CortexJS's names for the existing `In`/`Not_in`).
+- **`Subset`, `SubsetEqual`, `Superset`, `SupersetEqual`, `NotSubset`, `NotSuperset`** - proper/non-proper subset and superset tests over `Array`, matching CortexJS's Sets page.
+- **`Interval`/`Open`, and range membership via `Element`/`In`** - `["Element", x, ["Interval", 0, 1]]` matches CortexJS's own convention for "x is in [0, 1]" exactly (`ce.parse("x \in [0, 1]").json` produces this same shape). Either endpoint can be wrapped in `["Open", endpoint]` to exclude it (e.g. `["Interval", 0, ["Open", 1]]` for the half-open `[0, 1)`); a bare endpoint is included (closed) by default. `In`/`Element` now recognize `Interval` as a domain alongside the existing `Array`/string support.
 - **`Second`, `Third`**: fixed-position element access alongside `First`/`Last`.
 - **New constants:** `MachineEpsilon`, `CatalanConstant`, `EulerGamma`.
 - **New relations:** `IdenticallyEqual` (like `StrictEqual`, but also requires the same Python type - `1` and `1.0` are `StrictEqual` but not `IdenticallyEqual`), `Congruent` (`["Congruent", a, b, modulus]`, i.e. `a ≡ b (mod modulus)`).

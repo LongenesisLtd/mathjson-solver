@@ -1533,11 +1533,35 @@ Binary. `SetMinus` keeps `array1`'s elements not in `array2`; `SymmetricDifferen
 ```
 
 #### Element and NotElement
-CortexJS's names for the existing `In`/`Not_in`, in the same argument order (`["Element", value, collection]`, matching mathematical `x ∈ S`).
+CortexJS's names for the existing `In`/`Not_in`, in the same argument order (`["Element", value, collection]`, matching mathematical `x ∈ S`). `collection` can be an `Array`, a string, or an `Interval` (below) - `Element`/`In` dispatch on which one it is.
 
 ```python
 ["Element", 2, ["Array", 1, 2, 3]]                                  # True
 ["NotElement", 9, ["Array", 1, 2, 3]]                               # True
+```
+
+#### Subset, SubsetEqual, Superset, SupersetEqual, NotSubset, NotSuperset
+Proper and non-proper subset/superset tests over `Array`, treating both as sets of distinct elements - order and duplicates don't affect the comparison, matching `Union`/`Intersection`/etc. above. `Subset`/`Superset` are the *proper* forms (`A ⊂ B` requires `A ≠ B`); `SubsetEqual`/`SupersetEqual` allow equality (`A ⊆ B`). `NotSubset`/`NotSuperset` negate the *proper* forms (`A ⊄ B`/`A ⊅ B`), not the non-proper ones.
+
+```python
+["SubsetEqual", ["Array", 1, 2], ["Array", 1, 2, 3]]                # True
+["Subset", ["Array", 1, 2], ["Array", 1, 2, 3]]                     # True
+["Subset", ["Array", 1, 2, 3], ["Array", 1, 2, 3]]                  # False (equal, not proper)
+["SubsetEqual", ["Array", 1, 2, 3], ["Array", 1, 2, 3]]             # True
+["Superset", ["Array", 1, 2, 3], ["Array", 1, 2]]                   # True
+["NotSubset", ["Array", 1, 2, 3], ["Array", 1, 2, 3]]               # True (equal - not a *proper* subset)
+```
+
+#### Interval and Open: range membership
+`["Interval", lo, hi]` represents a closed numeric range `[lo, hi]`; wrap either endpoint in `["Open", endpoint]` to exclude it. This is CortexJS's own convention - `ce.parse("x \\in [0, 1]").json` produces exactly `["Element", "x", ["Interval", 0, 1]]`. `Interval`/`Open` are "marker" constructs (like `Function`/`NormalDistribution` elsewhere in this solver) - they aren't evaluated to a value on their own, only recognized by `Element`/`In` as their second argument.
+
+```python
+["Element", 0.5, ["Interval", 0, 1]]                                # True
+["Element", 1.5, ["Interval", 0, 1]]                                # False
+["Element", 1, ["Interval", 0, 1]]                                  # True (closed: endpoint included)
+["Element", 1, ["Interval", 0, ["Open", 1]]]                        # False ([0, 1): endpoint excluded)
+["Element", 0, ["Interval", ["Open", 0], 1]]                        # False ((0, 1]: endpoint excluded)
+["Element", "age", ["Interval", 40, 65]]                            # range check against a solver parameter
 ```
 
 ---
@@ -2232,6 +2256,8 @@ Evaluating a `["Function", ...]` expression outside of such a context (i.e. not 
 - [Union, Intersection](#union-and-intersection) - Combine or overlap two or more arrays
 - [SetMinus, SymmetricDifference](#setminus-and-symmetricdifference) - Array difference operations
 - [Element, NotElement](#element-and-notelement) - CortexJS names for `In`/`Not_in`
+- [Subset, SubsetEqual, Superset, SupersetEqual, NotSubset, NotSuperset](#subset-subsetequal-superset-supersetequal-notsubset-notsuperset) - Proper/non-proper subset and superset tests
+- [Interval, Open](#interval-and-open-range-membership) - Numeric range membership via `Element`/`In`
 
 ### Type Conversion
 - [Int](#int) - Convert to integer
