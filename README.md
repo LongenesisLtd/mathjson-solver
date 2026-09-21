@@ -196,6 +196,8 @@ We welcome contributions! Please feel free to:
 
 We also created [`londec`](https://pypi.org/project/londec/) — evaluate tree-structured conditions against an ordered history of events. It uses mathjson-solver internally.
 
+[`mathjson-tree-builder`](https://www.npmjs.com/package/mathjson-tree-builder) is a fully compatible frontend counterpart — a framework-agnostic, click-to-build editor for authoring MathJSON expressions in the browser.
+
 ## License
 
 [View license information](https://github.com/LongenesisLtd/mathjson-solver/blob/main/LICENSE)
