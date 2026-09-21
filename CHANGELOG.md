@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.3.0] - Unreleased
+## [2.3.0] - 2026-09-21
 
 ### Changed
 
-- The evaluator no longer copies its whole variable scope on every recursive evaluation step - only the constructs that actually introduce a new binding (`Constants`, `Reduce`'s legacy accumulator form, `TrapezoidalIntegrate`) copy it, and only their own copy. Measured 2-3x faster on arithmetic- and `Reduce`-heavy expressions; no behavior change.
+- 2-3x faster evaluation on arithmetic- and `Reduce`-heavy expressions. No behavior change.
 
 ### Fixed
 
@@ -30,12 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Figurate numbers and predicates: `IsSquare`, `IsTriangular`, `IsPentagonal`, `IsOctahedral`, `IsCenteredSquare`, `IsPerfect`, `IsAbundant`, `IsHappy`
 
   Not included: `RandomPrime` (nondeterminism, same reasoning as `Random`/`RandomChoice`/`RandomSample`).
+- **`Subset`, `SubsetEqual`, `Superset`, `SupersetEqual`, `NotSubset`, `NotSuperset`** - proper/non-proper subset and superset tests over `Array`, matching CortexJS's Sets page.
+- **`Interval`/`Open`, and range membership via `Element`/`In`** - `["Element", x, ["Interval", 0, 1]]` matches CortexJS's own convention for "x is in [0, 1]" exactly (`ce.parse("x \in [0, 1]").json` produces this same shape). Either endpoint can be wrapped in `["Open", endpoint]` to exclude it (e.g. `["Interval", 0, ["Open", 1]]` for the half-open `[0, 1)`); a bare endpoint is included (closed) by default. `In`/`Element` now recognize `Interval` as a domain alongside the existing `Array`/string support.
 - **Special functions:** `Gamma`, `GammaLn` (`math.gamma`/`math.lgamma`), `Beta`, `Factorial2`, and verified iterative algorithms `ErfInv`, `LambertW`, `AGM`, `EllipticK`, `EllipticE` (the "parameter" convention `K(m)`/`E(m)`, `m = k²`), `Hypergeometric1F1`, `Hypergeometric2F1` (defining power series; `Hypergeometric1F1` capped at `|z| <= 500` and uses Kummer's transformation for `z < 0` to avoid catastrophic cancellation, `Hypergeometric2F1` restricted to `|z| < 1`, its actual radius of convergence). Not included: `JacobiTheta`, `DedekindEta` - `scipy.special` (see below) doesn't implement these either, so they'd need a from-scratch q-series with the same "subtly wrong across the domain" risk as any other naive truncated series.
 - **`BesselJ`/`BesselY`/`BesselI`/`BesselK`, `AiryAi`/`AiryBi`/`AiryAiPrime`/`AiryBiPrime`, `Zeta`, `GammaRegularized`, `BetaRegularized`** - thin wrappers around `scipy.special`, behind a new optional `special-functions` extra (`pip install mathjson-solver[special-functions]`), same pattern as `integration`/`regex`. `GammaRegularized(a, z)` is the *upper* regularized incomplete gamma (`scipy`'s own `gammainc` is the lower form; this uses `gammaincc`); `BetaRegularized(x, a, b)` puts `x` first, unlike `scipy.special.betainc`'s `(a, b, x)`. Without the extra installed, these raise a clear `ImportError` naming the missing package.
 - **Combinatorics:** `Choose` (alias for `Binomial`), `Fibonacci`, `Multinomial`, `Subfactorial`, `BellNumber`, and the enumeration functions `PowerSet`, `Permutations`, `Combinations`, `CartesianProduct` - the latter four have **no built-in output-size limit** (a set of `n` elements has `2^n` subsets, etc.); see the new `blacklist` parameter below for disabling them in deployments that accept untrusted expressions.
 - **Core (structural introspection):** `Head`/`Tail` (operator name / argument list of a compound expression, read from the raw unevaluated tree), `Hold` (returns an argument unevaluated), `Identity`, `Type` (runtime kind of an evaluated value), `IsSame`/`Same` (structural, pre-evaluation equality - distinct from `Equal`/`StrictEqual`/`IdenticallyEqual`, which all compare evaluated values). Not included: CAS functions (`Evaluate`, `Expand`, `Simplify`, `Solve`, ...), mutable-state functions (`Declare`, `Assign`, `Assume`, ...), and LaTeX serialization (`Parse`, `Latex`, `Subscript`, ...) - same reasoning as elsewhere in this solver (no CAS, no mutable state, no rendering surface). `Error`/`IsError` also not included - this solver already has an established, different error model (`MathJSONException`).
 - **`create_solver(parameters, blacklist=[...])`**: disables the named constructs for that solver instance, raising `MathJSONException` if an expression tries to use one, rather than evaluating it or silently ignoring it. An access-policy control, not a resource limiter - it doesn't make an enabled construct safe against pathological input (in particular, it's the recommended way to disable the four uncapped enumeration functions above for untrusted expression sources). A blacklisted name that isn't an actual construct has no effect (not validated against the known-construct list).
 - **Type hints on the public API**: `create_solver`, `MathJSONException`, `extract_variables`, `translate_v1_mathjson` now have accurate parameter/return type hints, built on one shared `MathJSONExpression` alias for a MathJSON node (`str | int | float | bool | None | list[MathJSONExpression]`). The ~300 per-construct functions inside `create_solver`'s closure remain untyped - they operate on arbitrary runtime values by design (a construct can produce a `Fraction`, a `datetime.timedelta`, a compiled regex pattern, ...), so annotating each one wouldn't add real type safety.
+
+[2.3.0]: https://github.com/LongenesisLtd/mathjson-solver/compare/v2.2.1...v2.3.0
 
 ## [2.2.1] - 2026-09-14
 
@@ -56,8 +60,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Editing: `Append` (alias for the existing `Appended`), `Insert`, `DeleteAt`, `ReplaceAt`
   - Grouping: `Partition` (fixed chunk size), `Chunk` (fixed group count), `GroupBy`, `ChunkBy`, `Tally`
 - **Basic set algebra** over `Array`: `Union` and `Intersection` (variadic, deduplicated, order-preserving), `SetMinus`, `SymmetricDifference`, and `Element`/`NotElement` (CortexJS's names for the existing `In`/`Not_in`).
-- **`Subset`, `SubsetEqual`, `Superset`, `SupersetEqual`, `NotSubset`, `NotSuperset`** - proper/non-proper subset and superset tests over `Array`, matching CortexJS's Sets page.
-- **`Interval`/`Open`, and range membership via `Element`/`In`** - `["Element", x, ["Interval", 0, 1]]` matches CortexJS's own convention for "x is in [0, 1]" exactly (`ce.parse("x \in [0, 1]").json` produces this same shape). Either endpoint can be wrapped in `["Open", endpoint]` to exclude it (e.g. `["Interval", 0, ["Open", 1]]` for the half-open `[0, 1)`); a bare endpoint is included (closed) by default. `In`/`Element` now recognize `Interval` as a domain alongside the existing `Array`/string support.
 - **`Second`, `Third`**: fixed-position element access alongside `First`/`Last`.
 - **New constants:** `MachineEpsilon`, `CatalanConstant`, `EulerGamma`.
 - **New relations:** `IdenticallyEqual` (like `StrictEqual`, but also requires the same Python type - `1` and `1.0` are `StrictEqual` but not `IdenticallyEqual`), `Congruent` (`["Congruent", a, b, modulus]`, i.e. `a ≡ b (mod modulus)`).
