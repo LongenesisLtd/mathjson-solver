@@ -33,8 +33,6 @@ Coming from 1.x? Version 2 changed `Log`'s meaning — see [Migrating from 1.x](
 * **Data Processing:** Apply mathematical transformations to datasets
 * **Health Applications:** Calculate medical scores, dosages, or risk assessments
 
-**What's still missing:** a ready-to-use, user-facing editor for authoring MathJSON itself — today, the expressions have to come from somewhere else (a form builder, a generated JSON structure, hand-written JSON). CortexJS ships [MathLive's mathfield](https://mathlive.io/mathfield/) for entering math, but it's built for typing LaTeX-style notation (e-learning quizzes, scientific computing, calculators) — not for assembling a formula that references named fields from a form. Worth evaluating on its own merits rather than assumed to transfer.
-
 ## Installation
 
 ```bash
